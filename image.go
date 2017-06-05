@@ -124,6 +124,10 @@ func (s *store) Close() error {
 	return s.db.Close()
 }
 
+func (s *store) NextImage() (*image, error) {
+	return nil, nil
+}
+
 func (s *store) CreateImage(img *image) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(imgBucketName)

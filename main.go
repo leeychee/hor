@@ -33,6 +33,14 @@ func main() {
 			c.JSON(200, gin.H{"status": "rebuilding"})
 		}
 	})
+	r.GET("/image/_next", func(c *gin.Context) {
+		img, err := store.NextImage()
+		if err != nil {
+			c.JSON(500, gin.H{"status": err})
+		} else {
+			c.JSON(200, img)
+		}
+	})
 	// Get image by id
 	r.GET("/image/:id", func(c *gin.Context) {
 		idstr := c.Params.ByName("id")
