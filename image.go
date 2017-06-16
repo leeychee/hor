@@ -184,3 +184,10 @@ func (s *store) GetImage(id uint64) (*image, error) {
 	}
 	return img, nil
 }
+
+func (s *store) RemoveImage(id uint64) error {
+	return s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(imgBucketName)
+		return b.Delete(itob(id))
+	})
+}
