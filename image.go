@@ -81,8 +81,8 @@ func (s *store) init() error {
 	go func() {
 		filepath.Walk(s.path, func(path string, f os.FileInfo, err error) error {
 			if !f.IsDir() && strings.HasPrefix(f.Name(), "P_") {
-				log.Printf("Find a image: %s\n", f.Name())
-				imgC <- strings.SplitN(path, "/", 2)[1]
+				log.Printf("Find a image: %s\n", path)
+				imgC <- strings.SplitN(path, string(filepath.Separator), 2)[1]
 			}
 			return nil
 		})
