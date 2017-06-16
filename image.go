@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"os"
 	"path/filepath"
@@ -16,6 +17,7 @@ type object struct {
 	Y    int    `json:"y"`
 	W    int    `json:"w"`
 	H    int    `json:"h"`
+	Type string `json:"type"`
 	Path string `json:"path"`
 }
 
@@ -80,7 +82,7 @@ func (s *store) init() error {
 		filepath.Walk(s.path, func(path string, f os.FileInfo, err error) error {
 			if !f.IsDir() && strings.HasPrefix(f.Name(), "P_") {
 				log.Printf("Find a image: %s\n", f.Name())
-				imgC <- path
+				imgC <- strings.SplitN(path, "/", 2)[1]
 			}
 			return nil
 		})
@@ -124,8 +126,27 @@ func (s *store) Close() error {
 	return s.db.Close()
 }
 
-func (s *store) NextImage() (*image, error) {
-	return nil, nil
+func (s *store) NextImage(t string) (*image, error) {
+	var img *image
+	err := s.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(imgBucketName).Cursor()
+		img = &image{}
+		for k, v := b.First(); k != nil; k, v = b.Next() {
+			if err := json.Unmarshal(v, img); err != nil {
+				return err
+			}
+			if t == "tag" && img.Identified == 0 {
+				return nil
+			} else if t == "review" && img.Identified > 0 && img.Reviewed == 0 {
+				return nil
+			}
+		}
+		return errors.New("no more images")
+	})
+	if err != nil {
+		return nil, err
+	}
+	return img, nil
 }
 
 func (s *store) CreateImage(img *image) error {
@@ -151,12 +172,15 @@ func (s *store) UpdateImage(img *image) error {
 	})
 }
 
-func (s *store) GetImage(id uint64) *image {
+func (s *store) GetImage(id uint64) (*image, error) {
 	img := &image{}
-	s.db.View(func(tx *bolt.Tx) error {
+	err := s.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(imgBucketName)
 		v := b.Get(itob(id))
 		return json.Unmarshal(v, img)
 	})
-	return img
+	if err != nil {
+		return nil, err
+	}
+	return img, nil
 }

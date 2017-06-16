@@ -11,7 +11,7 @@ import (
 var path string
 
 func init() {
-	flag.StringVar(&path, "p", "./", "images's root path")
+	flag.StringVar(&path, "p", "./images", "images's root path")
 }
 
 func main() {
@@ -23,6 +23,7 @@ func main() {
 	defer store.Close()
 
 	r := gin.Default()
+	r.Static("f", path)
 
 	// Rebuild db from the given path
 	r.POST("/manage/_rebuild", func(c *gin.Context) {
@@ -33,8 +34,9 @@ func main() {
 			c.JSON(200, gin.H{"status": "rebuilding"})
 		}
 	})
-	r.GET("/image/_next", func(c *gin.Context) {
-		img, err := store.NextImage()
+	r.GET("/images/_next", func(c *gin.Context) {
+		_type := c.DefaultQuery("type", "tag")
+		img, err := store.NextImage(_type)
 		if err != nil {
 			c.JSON(500, gin.H{"status": err})
 		} else {
@@ -45,40 +47,52 @@ func main() {
 	r.GET("/image/:id", func(c *gin.Context) {
 		idstr := c.Params.ByName("id")
 		id, _ := strconv.Atoi(idstr)
-		img := store.GetImage(uint64(id))
-		c.JSON(200, img)
+		img, err := store.GetImage(uint64(id))
+		if err != nil {
+			c.JSON(500, gin.H{"status": err.Error()})
+		} else {
+			c.JSON(200, img)
+		}
 	})
 	r.POST("/image/:id/_tag", func(c *gin.Context) {
 		idstr := c.Params.ByName("id")
 		id, _ := strconv.Atoi(idstr)
-		img := store.GetImage(uint64(id))
-		img.Identified = 1
 		objs := &objects{}
 		if err := c.BindJSON(objs); err != nil {
 			c.JSON(500, gin.H{"status": err.Error()})
 		} else {
-			img.Objects = objs.Objs
-			if err := store.UpdateImage(img); err != nil {
+			img, err := store.GetImage(uint64(id))
+			if err != nil {
 				c.JSON(500, gin.H{"status": err.Error()})
 			} else {
-				c.JSON(200, gin.H{"status": "ok"})
+				img.Identified = 1
+				img.Objects = objs.Objs
+				if err := store.UpdateImage(img); err != nil {
+					c.JSON(500, gin.H{"status": err.Error()})
+				} else {
+					c.JSON(200, gin.H{"status": "ok"})
+				}
 			}
 		}
 	})
 	r.POST("/image/:id/_review", func(c *gin.Context) {
 		idstr := c.Params.ByName("id")
 		id, _ := strconv.Atoi(idstr)
-		img := store.GetImage(uint64(id))
-		img.Reviewed++
 		objs := &objects{}
 		if err := c.BindJSON(objs); err != nil {
 			c.JSON(500, gin.H{"status": err.Error()})
 		} else {
-			img.Objects = objs.Objs
-			if err := store.UpdateImage(img); err != nil {
+			img, err := store.GetImage(uint64(id))
+			if err != nil {
 				c.JSON(500, gin.H{"status": err.Error()})
 			} else {
-				c.JSON(200, gin.H{"status": "ok"})
+				img.Reviewed++
+				img.Objects = objs.Objs
+				if err := store.UpdateImage(img); err != nil {
+					c.JSON(500, gin.H{"status": err.Error()})
+				} else {
+					c.JSON(200, gin.H{"status": "ok"})
+				}
 			}
 		}
 	})
