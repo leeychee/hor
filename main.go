@@ -24,10 +24,10 @@ func main() {
 
 	r := gin.Default()
 	r.Static("f", path)
-	r.Static("static", "static")
+	r.Static("app", "app")
 
 	r.GET("/", func(c *gin.Context) {
-		c.Redirect(302, "static/index.html")
+		c.Redirect(302, "app/index.html")
 	})
 	// Rebuild db from the given path
 	r.POST("/manage/_rebuild", func(c *gin.Context) {
