@@ -33,27 +33,36 @@ type image struct {
 	Objects    []*object `json:"objects"`
 }
 
+type stat struct {
+	All        int `json:"all"`
+	Identified int `json:"identified"`
+	Reviewed   int `josn:"reviewed"`
+}
+
 type store struct {
 	db          *bolt.DB
 	path        string
+	dbpath      string
 	initialized bool
 }
 
-var dbFilename = "images_hr.db"
+var dbFilename = "hor.db"
 var imgBucketName = []byte("image")
 
 func newStore(path string) (*store, error) {
+	dbPath := filepath.Join(path, dbFilename)
 	dbFileExist := false
-	if _, err := os.Stat(dbFilename); err == nil {
+	if _, err := os.Stat(dbPath); err == nil {
 		dbFileExist = true
 	}
-	db, err := bolt.Open(dbFilename, 0600, nil)
+	db, err := bolt.Open(dbPath, 0600, nil)
 	if err != nil {
 		return nil, err
 	}
 	s := &store{
 		db,
 		path,
+		dbPath,
 		dbFileExist,
 	}
 	if !dbFileExist {
@@ -61,6 +70,8 @@ func newStore(path string) (*store, error) {
 		if err := s.init(); err != nil {
 			return nil, err
 		}
+	} else {
+		log.Println("already has db.")
 	}
 	return s, nil
 }
@@ -82,7 +93,8 @@ func (s *store) init() error {
 		filepath.Walk(s.path, func(path string, f os.FileInfo, err error) error {
 			if !f.IsDir() && strings.HasPrefix(f.Name(), "P_") {
 				log.Printf("Find a image: %s\n", path)
-				imgC <- strings.SplitN(path, string(filepath.Separator), 2)[1]
+				relativePath := path[len(s.path)+1:]
+				imgC <- relativePath
 			}
 			return nil
 		})
@@ -111,7 +123,7 @@ func (s *store) Rebuild() error {
 	if err := s.Close(); err != nil {
 		return err
 	}
-	if err := os.Remove(dbFilename); err != nil {
+	if err := os.Remove(s.dbpath); err != nil {
 		return err
 	}
 	s1, err := newStore(s.path)
@@ -190,4 +202,30 @@ func (s *store) RemoveImage(id uint64) error {
 		b := tx.Bucket(imgBucketName)
 		return b.Delete(itob(id))
 	})
+}
+
+func (s *store) Stat() (*stat, error) {
+	st := &stat{}
+	err := s.db.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(imgBucketName).Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			img := &image{}
+			err := json.Unmarshal(v, img)
+			if err != nil {
+				return err
+			}
+			st.All++
+			if img.Identified > 0 {
+				st.Identified++
+			}
+			if img.Reviewed > 0 {
+				st.Reviewed++
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return st, nil
 }

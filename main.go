@@ -34,6 +34,14 @@ func main() {
 			c.JSON(200, gin.H{"status": "rebuilding"})
 		}
 	})
+	r.GET("/images/_stat", func(c *gin.Context) {
+		s, err := store.Stat()
+		if err != nil {
+			c.JSON(500, gin.H{"status": err.Error()})
+		} else {
+			c.JSON(200, s)
+		}
+	})
 	// Get next image
 	// type=tag, return a untaged image
 	// type=review, return a taged but unreviewed image
