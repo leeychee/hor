@@ -138,7 +138,6 @@
                 <!--</div>-->
                 <div class="layout-content">
                     <div id="main" style="height: 100%;">
-                        <img src="http://192.168.99.2:9000/f/P_20170601100228_994.jpg">
                     </div>
                     <!--<div class="resize-container">-->
                       <!--<div class="resize-drag">-->
@@ -161,9 +160,10 @@
     </div>
 </template>
 <script>
-    import Rect from '../libs/rect';
-    var interact = require('interactjs');
+//    import Rect from '../libs/rect';
+//    var interact = require('interactjs');
     import Konva from 'konva';
+    var stage, layer, canvas, context;
     export default {
         data () {
             return {
@@ -272,83 +272,238 @@
             }
         },
         mounted: function () {
-            Rect.init("main");
-            interact('.resize-drag')
-                .draggable({
-                    // enable inertial throwing
-                    inertia: true,
-                    // keep the element within the area of it's parent
-                    restrict: {
-                      restriction: "parent",
-                      endOnly: true,
-                      elementRect: { top: 0, left: 0, bottom: 1, right: 1 }
-                    },
-                    // enable autoScroll
-                    autoScroll: true,
+            stage = new Konva.Stage({
+                container: 'main',
+                width: 5/6*window.innerWidth -30,
+                height: .8*window.innerHeight,
+            });
+            // add canvas element
+            layer = new Konva.Layer();
+            stage.add(layer);
 
-                    // call this function on every dragmove event
-                    onmove: dragMoveListener,
-                    // call this function on every dragend event
-                    onend: function (event) {
-                      var textEl = event.target.querySelector('p');
+            var imageObj = new Image();
+            imageObj.onload = function () {
+                var yoda = new Konva.Image({
+                    x: 0,
+                    y: 0,
+                    image: imageObj,
+//                    width: stage.width(),
+//                    height: imageObj.height/imageObj.width*stage.width(),
+                    width: imageObj.width/imageObj.height*stage.height(),
+                    height: stage.height(),
+                });
+                // add the shape to the layer
+//                layer.add(yoda);
+//                layer.draw();
+            };
+            imageObj.src = 'http://www.bz55.com/uploads/allimg/150306/139-1503061IR6.jpg';
 
-                      textEl && (textEl.textContent =
-                        'moved a distance of '
-                        + (Math.sqrt(event.dx * event.dx +
-                                     event.dy * event.dy)|0) + 'px');
-                    }
-                })
-                .resizable({
-                    preserveAspectRatio: true,
-                    edges: { left: true, right: true, bottom: true, top: true }
-                })
-                .on('resizemove', function (event) {
-                    var target = event.target,
-                        x = (parseFloat(target.getAttribute('data-x')) || 0),
-                        y = (parseFloat(target.getAttribute('data-y')) || 0);
+            canvas = document.createElement('canvas');
+            canvas.width = stage.width();
+            canvas.height = stage.height();
 
-                    // update the element's style
-                    target.style.width  = event.rect.width + 'px';
-                    target.style.height = event.rect.height + 'px';
+            var image = new Konva.Image({
+                image: canvas,
+                x: 0,
+                y: 0
+            });
+            layer.add(image);
+            stage.draw();
+            context = canvas.getContext("2d");
 
-                    // translate when resizing from top or left edges
-                    x += event.deltaRect.left;
-                    y += event.deltaRect.top;
-
-                    target.style.webkitTransform = target.style.transform =
-                        'translate(' + x + 'px,' + y + 'px)';
-
-                    target.setAttribute('data-x', x);
-                    target.setAttribute('data-y', y);
-                    target.textContent = Math.round(event.rect.width) + '×' + Math.round(event.rect.height);
-                })
-                .on('mouseover', function (event) {
-                    Rect.container.onmousedown = null;
-                    console.log("mouse come in!");
-                })
-                .on('mouseout', function (event) {
-                    Rect.container.onmousedown = Rect.start;
-                    console.log("mouse leave!");
-                })
-                ;
+            stage.addEventListener("mousedown", mouseDown, false);
+            stage.addEventListener("mousemove", mouseXY, false);
+            stage.addEventListener("mouseup", mouseUp, false);
         }
     };
-    function dragMoveListener (event) {
-        var target = event.target,
-            // keep the dragged position in the data-x/data-y attributes
-            x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx,
-            y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+    var startX, endX, startY, endY;
+    var mouseIsDown, mouseIsInGroup;
 
-        // translate the element
-        target.style.webkitTransform =
-        target.style.transform =
-          'translate(' + x + 'px, ' + y + 'px)';
+    function mouseDown(eve) {
+        if (!mouseIsInGroup) {
+            mouseIsDown = true;
+            var pos = getMousePos(canvas, eve);
+            startX = endX = pos.x;
+            startY = endY = pos.y;
+            drawSquare(); //update
+        }
+    }
 
-        // update the posiion attributes
-        target.setAttribute('data-x', x);
-        target.setAttribute('data-y', y);
-      }
+    function mouseXY(eve) {
+        if (mouseIsDown && !mouseIsInGroup) {
+            var pos = getMousePos(canvas, eve);
+            endX = pos.x;
+            endY = pos.y;
+            drawSquare();
+        }
+    }
 
-      // this is used later in the resizing and gesture demos
-      window.dragMoveListener = dragMoveListener;
+    function mouseUp(eve) {
+        if (mouseIsDown && !mouseIsInGroup) {
+            mouseIsDown = false;
+            var pos = getMousePos(canvas, eve);
+            endX = pos.x;
+            endY = pos.y;
+            drawSquare(); //update on mouse-up
+
+            console.log("mouse up！！！！");
+
+            var rect = new Konva.Rect({
+                width: endX - startX,
+                height: endY - startY,
+                stroke: 'black',
+                strokeWidth: 2
+            });
+            rect.on('mouseover', function () {
+                document.body.style.cursor = 'move';
+            });
+            rect.on('mouseout', function () {
+                document.body.style.cursor = 'default';
+            });
+
+            var rectGroup = new Konva.Group({
+                x: startX,
+                y: startY,
+                draggable: true
+            });
+            rectGroup.on('dragmove', function () {
+                console.log("x:" + this.getX(), "y:" + this.getY());
+            });
+            rectGroup.on('mouseover', function () {
+                mouseIsInGroup = true;
+                console.log("mouse over this group");
+            });
+            rectGroup.on('mouseout', function () {
+                mouseIsInGroup = false;
+                console.log("mouse out this group!!!");
+            });
+            layer.add(rectGroup);
+            rectGroup.add(rect);
+            addAnchor(rectGroup, 0, 0, 'topLeft');
+            addAnchor(rectGroup, endX - startX, 0, 'topRight');
+            addAnchor(rectGroup, endX - startX, endY - startY, 'bottomRight');
+            addAnchor(rectGroup, 0, endY - startY, 'bottomLeft');
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            layer.draw();
+        }
+    }
+
+    function drawSquare() {
+        // creating a square
+        var w = endX - startX;
+        var h = endY - startY;
+        var offsetX = (w < 0) ? w : 0;
+        var offsetY = (h < 0) ? h : 0;
+        var width = Math.abs(w);
+        var height = Math.abs(h);
+
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        context.beginPath();
+        context.rect(startX + offsetX, startY + offsetY, width, height);
+        context.lineWidth = 2;
+        context.strokeStyle = 'black';
+        context.stroke();
+        layer.draw();
+    }
+
+    function getMousePos(canvas, evt) {
+        var rect = canvas.getBoundingClientRect();
+        return {
+            x: evt.layerX - rect.left,
+            y: evt.layerY - rect.top
+        };
+    }
+
+    function update(activeAnchor) {
+        var group = activeAnchor.getParent();
+        var topLeft = group.get('.topLeft')[0];
+        var topRight = group.get('.topRight')[0];
+        var bottomRight = group.get('.bottomRight')[0];
+        var bottomLeft = group.get('.bottomLeft')[0];
+        var rect = group.get('Rect')[0];
+        var anchorX = activeAnchor.getX();
+        var anchorY = activeAnchor.getY();
+        // update anchor positions
+        switch (activeAnchor.getName()) {
+            case 'topLeft':
+                topRight.setY(anchorY);
+                bottomLeft.setX(anchorX);
+                break;
+            case 'topRight':
+                topLeft.setY(anchorY);
+                bottomRight.setX(anchorX);
+                break;
+            case 'bottomRight':
+                bottomLeft.setY(anchorY);
+                topRight.setX(anchorX);
+                break;
+            case 'bottomLeft':
+                bottomRight.setY(anchorY);
+                topLeft.setX(anchorX);
+                break;
+        }
+        rect.position(topLeft.position());
+        var width = topRight.getX() - topLeft.getX();
+        var height = bottomLeft.getY() - topLeft.getY();
+        if (width && height) {
+            console.log("width:" + width, "height:" + height);
+            rect.width(width);
+            rect.height(height);
+        }
+    }
+    function addAnchor(group, x, y, name) {
+        var stage = group.getStage();
+        var layer = group.getLayer();
+        var anchor = new Konva.Circle({
+            x: x,
+            y: y,
+            stroke: '#666',
+            fill: '#ddd',
+            strokeWidth: 1,
+            radius: 4,
+            name: name,
+            draggable: true,
+            dragOnTop: false
+        });
+        anchor.on('dragmove', function () {
+            update(this);
+            layer.draw();
+        });
+        anchor.on('mousedown touchstart', function () {
+            group.setDraggable(false);
+            this.moveToTop();
+        });
+        anchor.on('dragend', function () {
+            group.setDraggable(true);
+            layer.draw();
+        });
+        // add hover styling
+        anchor.on('mouseover', function () {
+            var layer = this.getLayer();
+            switch (this.getName()) {
+                case 'topLeft':
+                    document.body.style.cursor = 'nw-resize';
+                    break;
+                case 'topRight':
+                    document.body.style.cursor = 'ne-resize';
+                    break;
+                case 'bottomRight':
+                    document.body.style.cursor = 'se-resize';
+                    break;
+                case 'bottomLeft':
+                    document.body.style.cursor = 'sw-resize';
+                    break;
+            }
+            this.setStrokeWidth(4);
+            layer.draw();
+        });
+        anchor.on('mouseout', function () {
+            var layer = this.getLayer();
+            document.body.style.cursor = 'default';
+            this.setStrokeWidth(2);
+            layer.draw();
+        });
+        group.add(anchor);
+    }
 </script>
