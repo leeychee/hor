@@ -138,7 +138,7 @@
                 <!--</div>-->
                 <div class="layout-content">
                     <div id="main" style="height: 100%;">
-                        <!--<img src="http://192.168.99.2:9000/f/P_20170601100228_994.jpg">-->
+                        <img src="http://192.168.99.2:9000/f/P_20170601100228_994.jpg">
                     </div>
                     <!--<div class="resize-container">-->
                       <!--<div class="resize-drag">-->
@@ -272,218 +272,83 @@
             }
         },
         mounted: function () {
-//            let rect = new Rect();
-//            Rect.init("main");
-//            interact('.resize-drag')
-//                .draggable({
-//                    // enable inertial throwing
-//                    inertia: true,
-//                    // keep the element within the area of it's parent
-//                    restrict: {
-//                      restriction: "parent",
-//                      endOnly: true,
-//                      elementRect: { top: 0, left: 0, bottom: 1, right: 1 }
-//                    },
-//                    // enable autoScroll
-//                    autoScroll: true,
-//
-//                    // call this function on every dragmove event
-//                    onmove: dragMoveListener,
-//                    // call this function on every dragend event
-//                    onend: function (event) {
-//                      var textEl = event.target.querySelector('p');
-//
-//                      textEl && (textEl.textContent =
-//                        'moved a distance of '
-//                        + (Math.sqrt(event.dx * event.dx +
-//                                     event.dy * event.dy)|0) + 'px');
-//                    }
-//                })
-//                .resizable({
-//                    preserveAspectRatio: true,
-//                    edges: { left: true, right: true, bottom: true, top: true }
-//                })
-//                .on('resizemove', function (event) {
-//                    var target = event.target,
-//                        x = (parseFloat(target.getAttribute('data-x')) || 0),
-//                        y = (parseFloat(target.getAttribute('data-y')) || 0);
-//
-//                    // update the element's style
-//                    target.style.width  = event.rect.width + 'px';
-//                    target.style.height = event.rect.height + 'px';
-//
-//                    // translate when resizing from top or left edges
-//                    x += event.deltaRect.left;
-//                    y += event.deltaRect.top;
-//
-//                    target.style.webkitTransform = target.style.transform =
-//                        'translate(' + x + 'px,' + y + 'px)';
-//
-//                    target.setAttribute('data-x', x);
-//                    target.setAttribute('data-y', y);
-//                    target.textContent = Math.round(event.rect.width) + '×' + Math.round(event.rect.height);
-//                })
-//                .on('mouseover', function (event) {
-//                    Rect.container.onmousedown = null;
-//                    console.log("mouse come in!");
-//                })
-//                .on('mouseout', function (event) {
-//                    Rect.container.onmousedown = Rect.start;
-//                    console.log("mouse leave!");
-//                })
-//                ;
-            var stage = new Konva.Stage({
-                container: 'main',
-                width: 5/6*window.innerWidth -30,
-                height: .8*window.innerHeight,
-            });
+            Rect.init("main");
+            interact('.resize-drag')
+                .draggable({
+                    // enable inertial throwing
+                    inertia: true,
+                    // keep the element within the area of it's parent
+                    restrict: {
+                      restriction: "parent",
+                      endOnly: true,
+                      elementRect: { top: 0, left: 0, bottom: 1, right: 1 }
+                    },
+                    // enable autoScroll
+                    autoScroll: true,
 
-            // add canvas element
-            var layer = new Konva.Layer();
-            stage.add(layer);
+                    // call this function on every dragmove event
+                    onmove: dragMoveListener,
+                    // call this function on every dragend event
+                    onend: function (event) {
+                      var textEl = event.target.querySelector('p');
 
-            var imageObj = new Image();
-            imageObj.onload = function () {
-                var yoda = new Konva.Image({
-                    x: 0,
-                    y: 0,
-                    image: imageObj,
-//                    width: stage.width(),
-//                    height: imageObj.height/imageObj.width*stage.width(),
-                    width: imageObj.width/imageObj.height*stage.height(),
-                    height: stage.height(),
-                });
-                // add the shape to the layer
-                layer.add(yoda);
-                layer.add(rectGroup);
-                addAnchor(rectGroup, 0, 0, 'topLeft');
-                addAnchor(rectGroup, 100, 0, 'topRight');
-                addAnchor(rectGroup, 100, 50, 'bottomRight');
-                addAnchor(rectGroup, 0, 50, 'bottomLeft');
-                layer.draw();
+                      textEl && (textEl.textContent =
+                        'moved a distance of '
+                        + (Math.sqrt(event.dx * event.dx +
+                                     event.dy * event.dy)|0) + 'px');
+                    }
+                })
+                .resizable({
+                    preserveAspectRatio: true,
+                    edges: { left: true, right: true, bottom: true, top: true }
+                })
+                .on('resizemove', function (event) {
+                    var target = event.target,
+                        x = (parseFloat(target.getAttribute('data-x')) || 0),
+                        y = (parseFloat(target.getAttribute('data-y')) || 0);
 
-            };
-            imageObj.src = 'http://192.168.99.2:9000/f/P_20170608215851_322.jpg';
+                    // update the element's style
+                    target.style.width  = event.rect.width + 'px';
+                    target.style.height = event.rect.height + 'px';
 
-            var box = new Konva.Rect({
-                width: 100,
-                height: 50,
-                stroke: 'white',
-                strokeWidth: 3
-            });
-            var rectGroup = new Konva.Group({
-                x: 300,
-                y: 200,
-                draggable: true
-            });
-            rectGroup.on('dragmove', function () {
-                console.log("x:" + this.getX(),"y:" + this.getY());
-            });
-            rectGroup.add(box);
+                    // translate when resizing from top or left edges
+                    x += event.deltaRect.left;
+                    y += event.deltaRect.top;
 
-            // add cursor styling
-            box.on('mouseover', function () {
-                document.body.style.cursor = 'pointer';
-            });
-            box.on('mouseout', function () {
-                document.body.style.cursor = 'default';
-            });
+                    target.style.webkitTransform = target.style.transform =
+                        'translate(' + x + 'px,' + y + 'px)';
+
+                    target.setAttribute('data-x', x);
+                    target.setAttribute('data-y', y);
+                    target.textContent = Math.round(event.rect.width) + '×' + Math.round(event.rect.height);
+                })
+                .on('mouseover', function (event) {
+                    Rect.container.onmousedown = null;
+                    console.log("mouse come in!");
+                })
+                .on('mouseout', function (event) {
+                    Rect.container.onmousedown = Rect.start;
+                    console.log("mouse leave!");
+                })
+                ;
         }
     };
-//    function dragMoveListener (event) {
-//        var target = event.target,
-//            // keep the dragged position in the data-x/data-y attributes
-//            x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx,
-//            y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
-//
-//        // translate the element
-//        target.style.webkitTransform =
-//        target.style.transform =
-//          'translate(' + x + 'px, ' + y + 'px)';
-//
-//        // update the posiion attributes
-//        target.setAttribute('data-x', x);
-//        target.setAttribute('data-y', y);
-//      }
-//
-//      // this is used later in the resizing and gesture demos
-//      window.dragMoveListener = dragMoveListener;
-    function update(activeAnchor) {
-        var group = activeAnchor.getParent();
-        var topLeft = group.get('.topLeft')[0];
-        var topRight = group.get('.topRight')[0];
-        var bottomRight = group.get('.bottomRight')[0];
-        var bottomLeft = group.get('.bottomLeft')[0];
-        var rect = group.get('Rect')[0];
-        var anchorX = activeAnchor.getX();
-        var anchorY = activeAnchor.getY();
-        // update anchor positions
-        switch (activeAnchor.getName()) {
-            case 'topLeft':
-                topRight.setY(anchorY);
-                bottomLeft.setX(anchorX);
-                break;
-            case 'topRight':
-                topLeft.setY(anchorY);
-                bottomRight.setX(anchorX);
-                break;
-            case 'bottomRight':
-                bottomLeft.setY(anchorY);
-                topRight.setX(anchorX);
-                break;
-            case 'bottomLeft':
-                bottomRight.setY(anchorY);
-                topLeft.setX(anchorX);
-                break;
-        }
-        rect.position(topLeft.position());
-        var width = topRight.getX() - topLeft.getX();
-        var height = bottomLeft.getY() - topLeft.getY();
-        if(width && height) {
-            console.log("width:" + width, "height:" + height);
-            rect.width(width);
-            rect.height(height);
-        }
-    }
-    function addAnchor(group, x, y, name) {
-        var stage = group.getStage();
-        var layer = group.getLayer();
-        var anchor = new Konva.Circle({
-            x: x,
-            y: y,
-            stroke: '#666',
-            fill: '#ddd',
-            strokeWidth: 2,
-            radius: 8,
-            name: name,
-            draggable: true,
-            dragOnTop: false
-        });
-        anchor.on('dragmove', function() {
-            update(this);
-            layer.draw();
-        });
-        anchor.on('mousedown touchstart', function() {
-            group.setDraggable(false);
-            this.moveToTop();
-        });
-        anchor.on('dragend', function() {
-            group.setDraggable(true);
-            layer.draw();
-        });
-        // add hover styling
-        anchor.on('mouseover', function() {
-            var layer = this.getLayer();
-            document.body.style.cursor = 'pointer';
-            this.setStrokeWidth(4);
-            layer.draw();
-        });
-        anchor.on('mouseout', function() {
-            var layer = this.getLayer();
-            document.body.style.cursor = 'default';
-            this.setStrokeWidth(2);
-            layer.draw();
-        });
-        group.add(anchor);
-    }
+    function dragMoveListener (event) {
+        var target = event.target,
+            // keep the dragged position in the data-x/data-y attributes
+            x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx,
+            y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+
+        // translate the element
+        target.style.webkitTransform =
+        target.style.transform =
+          'translate(' + x + 'px, ' + y + 'px)';
+
+        // update the posiion attributes
+        target.setAttribute('data-x', x);
+        target.setAttribute('data-y', y);
+      }
+
+      // this is used later in the resizing and gesture demos
+      window.dragMoveListener = dragMoveListener;
 </script>
