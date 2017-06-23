@@ -293,8 +293,9 @@
                     height: stage.height(),
                 });
                 // add the shape to the layer
-//                layer.add(yoda);
-//                layer.draw();
+                layer.add(yoda);
+                layer.add(image);
+                layer.draw();
             };
             imageObj.src = 'http://www.bz55.com/uploads/allimg/150306/139-1503061IR6.jpg';
 
@@ -307,8 +308,9 @@
                 x: 0,
                 y: 0
             });
-            layer.add(image);
-            stage.draw();
+//            layer.add(image);
+//            layer.draw();
+//            stage.draw();
             context = canvas.getContext("2d");
 
             stage.addEventListener("mousedown", mouseDown, false);
@@ -351,7 +353,7 @@
             var rect = new Konva.Rect({
                 width: endX - startX,
                 height: endY - startY,
-                stroke: 'black',
+                stroke: 'white',
                 strokeWidth: 2
             });
             rect.on('mouseover', function () {
@@ -402,7 +404,7 @@
         context.beginPath();
         context.rect(startX + offsetX, startY + offsetY, width, height);
         context.lineWidth = 2;
-        context.strokeStyle = 'black';
+        context.strokeStyle = 'white';
         context.stroke();
         layer.draw();
     }
