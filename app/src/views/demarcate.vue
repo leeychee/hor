@@ -168,6 +168,9 @@
             });
             rectGroup.on('mousedown', function (e) {
                 if(e.evt.button == 2){
+                    if (currentGroup == this){
+                        currentGroup = null;
+                    }
                     this.destroy();
                     layer.draw();
                     mouseIsInGroup = false;
@@ -339,5 +342,38 @@
             layer.draw();
         });
         group.add(anchor);
+    }
+    window.addEventListener('keydown',check,true);
+
+    function check(e) {
+        if (currentGroup) {
+            var key = event.which || event.keyCode;
+            var rect = currentGroup.get('Rect')[0];
+            var minX = canvas.getBoundingClientRect().left;
+            var maxX = canvas.getBoundingClientRect().left + imgStageWidth - rect.width();
+            var minY = canvas.getBoundingClientRect().top;
+            var maxY = canvas.getBoundingClientRect().top + imgStageHeight - rect.height();
+            switch (key) {
+                case 37:
+                    if ((minX + 1) <= currentGroup.getX())
+                        currentGroup.setX(currentGroup.getX()-1);
+                    break;
+                case 38:
+                    if ((minY + 1) <= currentGroup.getY())
+                        currentGroup.setY(currentGroup.getY()-1);
+                    break;
+                case 39:
+                    if (currentGroup.getX() <= (maxX - 1))
+                        currentGroup.setX(currentGroup.getX()+1);
+                    break;
+                case 40:
+                    if (currentGroup.getY() <= (maxY - 1))
+                        currentGroup.setY(currentGroup.getY()+1);
+                    break;
+            }
+            layer.draw();
+        }
+//                alert(e.keyCode);
+
     }
 </script>
