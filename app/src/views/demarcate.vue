@@ -178,8 +178,8 @@
             });
             rect.on('click', function () {
                 for(var i = 0; i < layer.get('Group').length; i++) {
-                    let group = layer.get('Group')[i];
-                    let rect = group.get('Rect')[0];
+                    var group = layer.get('Group')[i];
+                    var rect = group.get('Rect')[0];
                     rect.setStroke('red');
                 }
                 this.stroke('yellow');
@@ -235,15 +235,30 @@
         var rect = group.get('Rect')[0];
         var anchorX = activeAnchor.getX();
         var anchorY = activeAnchor.getY();
+        var tmp;
+
+        //update group positions
+
         // update anchor positions
         switch (activeAnchor.getName()) {
             case 'topLeft':
-                topRight.setY(anchorY);
-                bottomLeft.setX(anchorX);
+//                topRight.setY(anchorY);
+//                bottomLeft.setX(anchorX);
+                group.setX(group.getX() + anchorX);
+                group.setY(group.getY() + anchorY);
+                topLeft.position({x:0, y:0});
+                topRight.position({x:topRight.getX() - anchorX, y:0});
+                bottomLeft.position({x:0, y:bottomLeft.getY() - anchorY});
+                bottomRight.position({x:topRight.getX() - anchorX, y:bottomLeft.getY() - anchorY});
                 break;
             case 'topRight':
-                topLeft.setY(anchorY);
-                bottomRight.setX(anchorX);
+//                topLeft.setY(anchorY);
+//                bottomRight.setX(anchorX);
+                group.setY(group.getY() + anchorY);
+                topLeft.position({x:0, y:0});
+                topRight.position({x:anchorX, y:0});
+                bottomLeft.position({x:0, y:rect.height()-anchorY});
+                bottomRight.position({x:anchorX, y:rect.height()-anchorY});
                 break;
             case 'bottomRight':
                 bottomLeft.setY(anchorY);
@@ -254,9 +269,15 @@
                 topLeft.setX(anchorX);
                 break;
         }
+
+
         rect.position(topLeft.position());
         var width = topRight.getX() - topLeft.getX();
         var height = bottomLeft.getY() - topLeft.getY();
+        console.log("topLeft.getX():"+topLeft.getX(),"topLeft.getY():"+topLeft.getY());
+        console.log("topRight.getX():"+topRight.getX(),"topRight.getY():"+topRight.getY());
+        console.log("bottomLeft.getX():"+bottomLeft.getX(),"bottomLeft.getY():"+bottomLeft.getY());
+        console.log("bottomRight.getX():"+bottomRight.getX(),"bottomRight.getY():"+bottomRight.getY());
         if (width && height) {
             console.log("width:" + width, "height:" + height);
             rect.width(width);
@@ -294,12 +315,41 @@
             draggable: true,
             dragOnTop: false,
             dragBoundFunc: function (pos) {
-                var X=pos.x;
-                var Y=pos.y;
-                if(X<minX){X=minX;}
-                if(X>maxX){X=maxX;}
-                if(Y<minY){Y=minY;}
-                if(Y>maxY){Y=maxY;}
+                var X = pos.x;
+                var Y = pos.y;
+                var p = this.getParent();
+                var r = p.get('Rect')[0];
+
+                switch (this.getName()) {
+                    case 'topLeft':
+                        if(X<minX){X=minX;}
+                        if(X>p.getX()+r.width()){X=p.getX()+r.width();}
+                        if(Y<minY){Y=minY;}
+                        if(Y>p.getY()+r.height()){Y=p.getY()+r.height();}
+                        break;
+                    case 'topRight':
+                        if(X<p.getX()){X=p.getX();}
+                        if(X>maxX){X=maxX;}
+                        if(Y<minY){Y=minY;}
+                        if(Y>p.getY()+r.height()){Y=p.getY()+r.height();}
+                        break;
+                    case 'bottomLeft':
+                        if(X<minX){X=minX;}
+                        if(X>p.getX()+r.width()){X=p.getX()+r.width();}
+                        if(Y<p.getY()){Y=p.getY();}
+                        if(Y>maxY){Y=maxY;}
+                        break;
+                    case 'bottomRight':
+                        if(X<p.getX()){X=p.getX();}
+                        if(X>maxX){X=maxX;}
+                        if(Y<p.getY()){Y=p.getY();}
+                        if(Y>maxY){Y=maxY;}
+                        break;
+                }
+//                if(X<minX){X=minX;}
+//                if(X>maxX){X=maxX;}
+//                if(Y<minY){Y=minY;}
+//                if(Y>maxY){Y=maxY;}
                 return({x:X, y:Y});
             }
         });
@@ -325,10 +375,10 @@
                 case 'topRight':
                     document.body.style.cursor = 'crosshair';
                     break;
-                case 'bottomRight':
+                case 'bottomLeft':
                     document.body.style.cursor = 'crosshair';
                     break;
-                case 'bottomLeft':
+                case 'bottomRight':
                     document.body.style.cursor = 'crosshair';
                     break;
             }
@@ -344,7 +394,7 @@
         group.add(anchor);
     }
     window.addEventListener('keydown',check,true);
-
+    document.oncontextmenu = function(){return false;};
     function check(e) {
         if (currentGroup) {
             var key = event.which || event.keyCode;
@@ -375,5 +425,12 @@
         }
 //                alert(e.keyCode);
 
+    }
+
+    Array.prototype.max = function(){
+      return Math.max.apply({},this)
+    }
+    Array.prototype.min = function(){
+      return Math.min.apply({},this)
     }
 </script>
