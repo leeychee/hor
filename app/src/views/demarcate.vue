@@ -23,8 +23,18 @@
 </template>
 <script>
     import Konva from 'konva';
-    var stage, layer, canvas, context, aspectRatio, imgStageWidth, imgStageHeight, currentGroup;
-    export default {
+    var stage,
+        layer,
+        drawCanvas,
+        context,
+        aspectRatio,//画布区域宽高比
+        zoomRatio, //图片缩放比
+        imageObj,
+        imgStageWidth,
+        imgStageHeight,
+        currentGroup;
+    var demarcate =  {
+        name: 'demarcate',
         data() {
             return {
 //                stageWidth: 5/6*window.innerWidth,
@@ -49,28 +59,23 @@
                 layer = new Konva.Layer();
                 stage.add(layer);
 
-                var imageObj = new Image();
+                imageObj = new Image();
                 imageObj.onload = function () {
                     aspectRatio = stage.width()/stage.height();
                     imgStageWidth = imageObj.width/imageObj.height >= aspectRatio ? stage.width() : imageObj.width/imageObj.height*stage.height();
                     imgStageHeight = imageObj.width/imageObj.height >= aspectRatio ? imageObj.height/imageObj.width*stage.width() : stage.height();
+                    zoomRatio = imageObj.width/imgStageWidth;
                     var yoda = new Konva.Image({
                         x: 0,
                         y: 0,
                         image: imageObj,
                         width: imgStageWidth,
                         height: imgStageHeight,
-//                        width: stage.width(),
-//                        height: imageObj.height/imageObj.width*stage.width(),
-    //                    width: imageObj.width/imageObj.height*stage.height(),
-    //                    height: stage.height(),
                     });
-                    // add the shape to the layer
-                    canvas.width = imgStageWidth;
-                    canvas.height = imgStageHeight;
-
+                    drawCanvas.width = imgStageWidth;
+                    drawCanvas.height = imgStageHeight;
                     var canvasImage = new Konva.Image({
-                        image: canvas,
+                        image: drawCanvas,
                         x: 0,
                         y: 0
                     });
@@ -80,12 +85,12 @@
                 };
                 imageObj.src = 'http://www.bz55.com/uploads/allimg/150306/139-1503061IR6.jpg';
 
-                canvas = document.createElement('canvas');
+                drawCanvas = document.createElement('canvas');
 
     //            layer.add(image);
     //            layer.draw();
     //            stage.draw();
-                context = canvas.getContext("2d");
+                context = drawCanvas.getContext("2d");
 
                 stage.addEventListener("mousedown", mouseDown, false);
                 stage.addEventListener("mousemove", mouseXY, false);
@@ -99,7 +104,7 @@
     function mouseDown(eve) {
         if (!mouseIsInGroup) {
             mouseIsDown = true;
-            var pos = getMousePos(canvas, eve);
+            var pos = getMousePos(drawCanvas, eve);
             startX = endX = pos.x;
             startY = endY = pos.y;
             drawSquare(); //update
@@ -108,7 +113,7 @@
 
     function mouseXY(eve) {
         if (mouseIsDown && !mouseIsInGroup) {
-            var pos = getMousePos(canvas, eve);
+            var pos = getMousePos(drawCanvas, eve);
             endX = pos.x;
             endY = pos.y;
             drawSquare();
@@ -118,16 +123,14 @@
     function mouseUp(eve) {
         if (mouseIsDown && !mouseIsInGroup) {
             mouseIsDown = false;
-            var pos = getMousePos(canvas, eve);
+            var pos = getMousePos(drawCanvas, eve);
             endX = pos.x;
             endY = pos.y;
             drawSquare(); //update on mouse-up
 
-            console.log("mouse up！！！！");
-
             var rect = new Konva.Rect({
-                width: endX - startX,
-                height: endY - startY,
+                width: startX <= endX ? endX - startX : startX - endX,
+                height: startY <= endY ? endY - startY : startY -endY,
                 stroke: 'red',
                 strokeWidth: 1,
                 dash: [5, 5]
@@ -139,13 +142,13 @@
                 document.body.style.cursor = 'default';
             });
 
-            var minX = canvas.getBoundingClientRect().left;
-            var maxX = canvas.getBoundingClientRect().left + imgStageWidth - rect.width();
-            var minY = canvas.getBoundingClientRect().top;
-            var maxY = canvas.getBoundingClientRect().top + imgStageHeight - rect.height();
+            var minX = drawCanvas.getBoundingClientRect().left;
+            var maxX = drawCanvas.getBoundingClientRect().left + imgStageWidth - rect.width();
+            var minY = drawCanvas.getBoundingClientRect().top;
+            var maxY = drawCanvas.getBoundingClientRect().top + imgStageHeight - rect.height();
             var rectGroup = new Konva.Group({
-                x: startX,
-                y: startY,
+                x: startX <= endX ? startX : endX,
+                y: startY <= endY ? startY : endY,
                 draggable: true,
                 dragBoundFunc: function (pos) {
                     var X=pos.x;
@@ -158,7 +161,8 @@
                 }
             });
             rectGroup.on('dragmove', function () {
-                console.log("x:" + this.getX(), "y:" + this.getY());
+//                console.log("x:" + this.getX(), "y:" + this.getY());
+                console.log("originX:", this.getX()*zoomRatio, "originY:", this.getY()*zoomRatio);
             });
             rectGroup.on('mouseover', function () {
                 mouseIsInGroup = true;
@@ -188,12 +192,12 @@
             });
             rectGroup.add(rect);
             layer.add(rectGroup);
-            addAnchor(rectGroup, 0, 0, 'topLeft');
-            addAnchor(rectGroup, endX - startX, 0, 'topRight');
-            addAnchor(rectGroup, endX - startX, endY - startY, 'bottomRight');
-            addAnchor(rectGroup, 0, endY - startY, 'bottomLeft');
+                addAnchor(rectGroup, 0, 0, 'topLeft');
+                addAnchor(rectGroup, startX <= endX ? endX - startX : startX - endX, 0, 'topRight');
+                addAnchor(rectGroup, 0, startY <= endY ? endY - startY : startY -endY, 'bottomLeft');
+                addAnchor(rectGroup, startX <= endX ? endX - startX : startX - endX, startY <= endY ? endY - startY : startY -endY, 'bottomRight');
 
-            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
             layer.draw();
         }
     }
@@ -207,7 +211,7 @@
         var width = Math.abs(w);
         var height = Math.abs(h);
 
-        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
 
         context.beginPath();
         context.rect(startX + offsetX, startY + offsetY, width, height);
@@ -237,36 +241,35 @@
         var anchorY = activeAnchor.getY();
         var tmp;
 
-        //update group positions
-
-        // update anchor positions
+//        console.log("anchorX:"+anchorX,"anchorY:"+anchorY);
         switch (activeAnchor.getName()) {
             case 'topLeft':
-//                topRight.setY(anchorY);
-//                bottomLeft.setX(anchorX);
                 group.setX(group.getX() + anchorX);
                 group.setY(group.getY() + anchorY);
                 topLeft.position({x:0, y:0});
                 topRight.position({x:topRight.getX() - anchorX, y:0});
                 bottomLeft.position({x:0, y:bottomLeft.getY() - anchorY});
-                bottomRight.position({x:topRight.getX() - anchorX, y:bottomLeft.getY() - anchorY});
+                bottomRight.position({x:bottomRight.getX() - anchorX, y:bottomRight.getY() - anchorY});
                 break;
             case 'topRight':
-//                topLeft.setY(anchorY);
-//                bottomRight.setX(anchorX);
                 group.setY(group.getY() + anchorY);
                 topLeft.position({x:0, y:0});
                 topRight.position({x:anchorX, y:0});
-                bottomLeft.position({x:0, y:rect.height()-anchorY});
-                bottomRight.position({x:anchorX, y:rect.height()-anchorY});
-                break;
-            case 'bottomRight':
-                bottomLeft.setY(anchorY);
-                topRight.setX(anchorX);
+                bottomLeft.position({x:0, y:bottomLeft.getY()-anchorY});
+                bottomRight.position({x:anchorX, y:bottomRight.getY()-anchorY});
                 break;
             case 'bottomLeft':
-                bottomRight.setY(anchorY);
-                topLeft.setX(anchorX);
+                group.setX(group.getX() + anchorX);
+                topLeft.position({x:0, y:0});
+                topRight.position({x:topRight.getX() - anchorX, y:0});
+                bottomLeft.position({x:0, y:anchorY});
+                bottomRight.position({x:bottomRight.getX() - anchorX, y:anchorY});
+                break;
+            case 'bottomRight':
+                topLeft.position({x:0, y:0});
+                topRight.position({x:anchorX, y:0});
+                bottomLeft.position({x:0, y:anchorY});
+                bottomRight.position({x:anchorX, y:anchorY});
                 break;
         }
 
@@ -274,36 +277,35 @@
         rect.position(topLeft.position());
         var width = topRight.getX() - topLeft.getX();
         var height = bottomLeft.getY() - topLeft.getY();
-        console.log("topLeft.getX():"+topLeft.getX(),"topLeft.getY():"+topLeft.getY());
-        console.log("topRight.getX():"+topRight.getX(),"topRight.getY():"+topRight.getY());
-        console.log("bottomLeft.getX():"+bottomLeft.getX(),"bottomLeft.getY():"+bottomLeft.getY());
-        console.log("bottomRight.getX():"+bottomRight.getX(),"bottomRight.getY():"+bottomRight.getY());
-        if (width && height) {
-            console.log("width:" + width, "height:" + height);
-            rect.width(width);
-            rect.height(height);
-            var minX = canvas.getBoundingClientRect().left;
-            var maxX = canvas.getBoundingClientRect().left + imgStageWidth - rect.width();
-            var minY = canvas.getBoundingClientRect().top;
-            var maxY = canvas.getBoundingClientRect().top + imgStageHeight - rect.height();
-            group.dragBoundFunc(function (pos) {
-                var X=pos.x;
-                var Y=pos.y;
-                if(X<minX){X=minX;}
-                if(X>maxX){X=maxX;}
-                if(Y<minY){Y=minY;}
-                if(Y>maxY){Y=maxY;}
-                return({x:X, y:Y});
-            });
-        }
+//        console.log("topLeft.getX():"+topLeft.getX(),"topLeft.getY():"+topLeft.getY());
+//        console.log("topRight.getX():"+topRight.getX(),"topRight.getY():"+topRight.getY());
+//        console.log("bottomLeft.getX():"+bottomLeft.getX(),"bottomLeft.getY():"+bottomLeft.getY());
+//        console.log("bottomRight.getX():"+bottomRight.getX(),"bottomRight.getY():"+bottomRight.getY());
+        console.log("width:" + width, "height:" + height);
+        console.log("originWidth:", width*zoomRatio, "originHeight:", height*zoomRatio);
+        rect.width(width);
+        rect.height(height);
+        var minX = drawCanvas.getBoundingClientRect().left;
+        var maxX = drawCanvas.getBoundingClientRect().left + imgStageWidth - rect.width();
+        var minY = drawCanvas.getBoundingClientRect().top;
+        var maxY = drawCanvas.getBoundingClientRect().top + imgStageHeight - rect.height();
+        group.dragBoundFunc(function (pos) {
+            var X=pos.x;
+            var Y=pos.y;
+            if(X<minX){X=minX;}
+            if(X>maxX){X=maxX;}
+            if(Y<minY){Y=minY;}
+            if(Y>maxY){Y=maxY;}
+            return({x:X, y:Y});
+        });
     }
     function addAnchor(group, x, y, name) {
         var stage = group.getStage();
         var layer = group.getLayer();
-        var minX = canvas.getBoundingClientRect().left;
-        var maxX = canvas.getBoundingClientRect().right + imgStageWidth;
-        var minY = canvas.getBoundingClientRect().top;
-        var maxY = canvas.getBoundingClientRect().top + imgStageHeight;
+        var minX = drawCanvas.getBoundingClientRect().left;
+        var maxX = drawCanvas.getBoundingClientRect().right + imgStageWidth;
+        var minY = drawCanvas.getBoundingClientRect().top;
+        var maxY = drawCanvas.getBoundingClientRect().top + imgStageHeight;
         var anchor = new Konva.Circle({
             x: x,
             y: y,
@@ -319,7 +321,7 @@
                 var Y = pos.y;
                 var p = this.getParent();
                 var r = p.get('Rect')[0];
-
+//                console.log("r:",r.width(),r.height());
                 switch (this.getName()) {
                     case 'topLeft':
                         if(X<minX){X=minX;}
@@ -346,10 +348,6 @@
                         if(Y>maxY){Y=maxY;}
                         break;
                 }
-//                if(X<minX){X=minX;}
-//                if(X>maxX){X=maxX;}
-//                if(Y<minY){Y=minY;}
-//                if(Y>maxY){Y=maxY;}
                 return({x:X, y:Y});
             }
         });
@@ -367,7 +365,6 @@
         });
         // add hover styling
         anchor.on('mouseover', function () {
-            var layer = this.getLayer();
             switch (this.getName()) {
                 case 'topLeft':
                     document.body.style.cursor = 'crosshair';
@@ -386,7 +383,6 @@
             layer.draw();
         });
         anchor.on('mouseout', function () {
-            var layer = this.getLayer();
             document.body.style.cursor = 'default';
             this.strokeWidth(1);
             layer.draw();
@@ -399,38 +395,90 @@
         if (currentGroup) {
             var key = event.which || event.keyCode;
             var rect = currentGroup.get('Rect')[0];
-            var minX = canvas.getBoundingClientRect().left;
-            var maxX = canvas.getBoundingClientRect().left + imgStageWidth - rect.width();
-            var minY = canvas.getBoundingClientRect().top;
-            var maxY = canvas.getBoundingClientRect().top + imgStageHeight - rect.height();
+            var topLeft = currentGroup.get('.topLeft')[0];
+            var topRight = currentGroup.get('.topRight')[0];
+            var bottomRight = currentGroup.get('.bottomRight')[0];
+            var bottomLeft = currentGroup.get('.bottomLeft')[0];
+            var minX = drawCanvas.getBoundingClientRect().left;
+            var maxX = drawCanvas.getBoundingClientRect().left + imgStageWidth - rect.width();
+            var minY = drawCanvas.getBoundingClientRect().top;
+            var maxY = drawCanvas.getBoundingClientRect().top + imgStageHeight - rect.height();
             switch (key) {
-                case 37:
+                case 37://←
                     if ((minX + 1) <= currentGroup.getX())
                         currentGroup.setX(currentGroup.getX()-1);
                     break;
-                case 38:
+                case 38://↑
                     if ((minY + 1) <= currentGroup.getY())
                         currentGroup.setY(currentGroup.getY()-1);
                     break;
-                case 39:
+                case 39://→
                     if (currentGroup.getX() <= (maxX - 1))
                         currentGroup.setX(currentGroup.getX()+1);
                     break;
-                case 40:
+                case 40://↓
                     if (currentGroup.getY() <= (maxY - 1))
                         currentGroup.setY(currentGroup.getY()+1);
                     break;
+                case 67://c
+                    if ((minX + 1) <= currentGroup.getX()) {
+                        topLeft.setX(topLeft.getX()-1);
+                        bottomLeft.setX(bottomLeft.getX()-1);
+                    }
+                    if ((minY + 1) <= currentGroup.getY()) {
+                        topLeft.setY(topLeft.getY()-1);
+                        topRight.setY(topRight.getY()-1);
+                    }
+                    if (currentGroup.getX() <= (maxX - 1)) {
+                        topRight.setX(topRight.getX()+1);
+                        bottomRight.setX(bottomRight.getX()+1);
+                    }
+                    if (currentGroup.getY() <= (maxY - 1)) {
+                        bottomLeft.setY(bottomLeft.getY()+1);
+                        bottomRight.setY(bottomRight.getY()+1);
+                    }
+                    update(topLeft);
+                    layer.draw();
+                    break;
+                case 68://d
+                    if (topLeft.getX() + 2 <= topRight.getX()) {
+                        topLeft.setX(topLeft.getX()+1);
+                        topRight.setX(topRight.getX()-1);
+                        bottomLeft.setX(bottomLeft.getX()+1);
+                        bottomRight.setX(bottomRight.getX()-1);
+                    }
+                    if (topLeft.getY() + 2 <= bottomLeft.getY()) {
+                        topLeft.setY(topLeft.getY()+1);
+                        topRight.setY(topRight.getY()+1);
+                        bottomLeft.setY(bottomLeft.getY()-1);
+                        bottomRight.setY(bottomRight.getY()-1);
+                    }
+                    update(topLeft);
+                    update(topRight);
+                    update(bottomLeft);
+                    update(bottomRight);
+                    layer.draw();
+                    break;
+                case 65://a
+                    break;
+                case 83://s
+//                    imageObj.src = 'http://www.bz55.com/uploads/allimg/150306/139-1503061IR6.jpg';
+//                    layer.remove('Group');
+//                    currentGroup = null;
+//                    layer.draw();
+//                    demarcate.methods.stageCanvas();
+                    break;
+
             }
             layer.draw();
         }
 //                alert(e.keyCode);
-
     }
-
+    export default demarcate;
     Array.prototype.max = function(){
       return Math.max.apply({},this)
-    }
+    };
     Array.prototype.min = function(){
       return Math.min.apply({},this)
-    }
+    };
 </script>
