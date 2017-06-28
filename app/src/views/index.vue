@@ -3,7 +3,6 @@
         width: 100%;
         position: absolute;
         border: 1px solid #d7dde4;
-        background: #f5f7f9;
         /*position: relative;*/
         height: 100%;
         overflow: hidden;
@@ -41,13 +40,11 @@
     }
 
     .layout-logo-left {
-        width: 90%;
-        height: 30px;
-        background: #5b6270;
+        width: 100%;
+        height: 40px;
+        /*background: #464c5b;*/
         border-radius: 3px;
         margin: 15px auto;
-        padding-left: 8px;
-        padding-top: 6px;
         color: white;
     }
 
@@ -96,23 +93,26 @@
         <Row type="flex">
             <i-col :span="spanLeft" class="layout-menu-left">
                 <Menu active-name="1" theme="dark" width="auto" @on-select="onSelect">
-                    <div class="layout-logo-left">LOGO—HOR</div>
-                    <Menu-item name="1">
+                    <div class="layout-logo-left">
+                        <!--<embed :src="logoSVG" width="95" height="30" type="image/svg+xml"  />-->
+                        <img :src="logoSVG" width="80%" height="30" style="margin: 5% 10%;">
+                    </div>
+                    <Menu-item name="1" title="标定">
                         <Icon type="ios-navigate" :size="iconSize"></Icon>
                         <span class="layout-text">Demarcate</span>
                     </Menu-item>
-                    <Menu-item name="2">
+                    <Menu-item name="2" title="审阅">
                         <Icon type="ios-keypad" :size="iconSize"></Icon>
                         <span class="layout-text">Review</span>
                     </Menu-item>
-                    <Menu-item name="3">
+                    <Menu-item name="3" title="导出">
                         <Icon type="ios-analytics" :size="iconSize"></Icon>
                         <span class="layout-text">Export</span>
                     </Menu-item>
                 </Menu>
             </i-col>
             <i-col :span="spanMiddle">
-                <div class="layout-header">
+                <div v-if="showHeader" class="layout-header">
                     <i-button type="text" @click="toggleLeftClick">
                         <Icon type="navicon" size="32"></Icon>
                     </i-button>
@@ -150,14 +150,15 @@
     </div>
 </template>
 <script>
-    //    import Rect from '../libs/rect';
-    //    var interact = require('interactjs');
+    import logoUrl from '../static/img/hor.svg'
     export default {
         data () {
             return {
                 title: "HOR",
-                spanLeft: 4,
-                spanMiddle: 20,
+                logoSVG: logoUrl,
+                showHeader: false,
+                spanLeft: 2,
+                spanMiddle: 22,
                 spanRight: 6,
                 columns2: [
                     {

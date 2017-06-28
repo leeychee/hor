@@ -52,8 +52,8 @@
             stageCanvas: function () {
                 stage = new Konva.Stage({
                     container: 'main',
-                    width: 5/6*window.innerWidth,
-                    height: window.innerHeight - 60,
+                    width: 11/12*window.innerWidth,
+                    height: window.innerHeight,
                 });
                 // add canvas element
                 layer = new Konva.Layer();
