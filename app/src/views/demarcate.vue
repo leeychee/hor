@@ -60,41 +60,56 @@
                 stage.add(layer);
 
                 imageObj = new Image();
-                imageObj.onload = function () {
-                    aspectRatio = stage.width()/stage.height();
-                    imgStageWidth = imageObj.width/imageObj.height >= aspectRatio ? stage.width() : imageObj.width/imageObj.height*stage.height();
-                    imgStageHeight = imageObj.width/imageObj.height >= aspectRatio ? imageObj.height/imageObj.width*stage.width() : stage.height();
-                    zoomRatio = imageObj.width/imgStageWidth;
-                    var yoda = new Konva.Image({
-                        x: 0,
-                        y: 0,
-                        image: imageObj,
-                        width: imgStageWidth,
-                        height: imgStageHeight,
-                    });
-                    drawCanvas.width = imgStageWidth;
-                    drawCanvas.height = imgStageHeight;
-                    var canvasImage = new Konva.Image({
-                        image: drawCanvas,
-                        x: 0,
-                        y: 0
-                    });
-                    layer.add(yoda);
-                    layer.add(canvasImage);
-                    layer.draw();
-                };
-                imageObj.src = 'http://www.bz55.com/uploads/allimg/150306/139-1503061IR6.jpg';
 
-                drawCanvas = document.createElement('canvas');
+                var yoda = new Konva.Image({
+                    x: 0,
+                    y: 0,
+//                    image: imageObj,
+//                    width: imgStageWidth,
+//                    height: imgStageHeight,
+                });
 
+                var canvasImage = new Konva.Image({
+//                    image: drawCanvas,
+                    x: 0,
+                    y: 0
+                });
+                layer.add(yoda);
+                layer.add(canvasImage);
     //            layer.add(image);
     //            layer.draw();
     //            stage.draw();
+
+                drawCanvas = document.createElement('canvas');
                 context = drawCanvas.getContext("2d");
 
                 stage.addEventListener("mousedown", mouseDown, false);
                 stage.addEventListener("mousemove", mouseXY, false);
                 stage.addEventListener("mouseup", mouseUp, false);
+
+                imageObj.src = 'http://www.bz55.com/uploads/allimg/150306/139-1503061IR6.jpg';
+                imageObj.onload = function () {
+                    aspectRatio = stage.width()/stage.height();
+                    imgStageWidth = imageObj.width/imageObj.height >= aspectRatio ? stage.width() : imageObj.width/imageObj.height*stage.height();
+                    imgStageHeight = imageObj.width/imageObj.height >= aspectRatio ? imageObj.height/imageObj.width*stage.width() : stage.height();
+                    zoomRatio = imageObj.width/imgStageWidth;
+
+                    yoda.width(imgStageWidth);
+                    yoda.height(imgStageHeight);
+                    yoda.image(imageObj);
+                    drawCanvas.width = imgStageWidth;
+                    drawCanvas.height = imgStageHeight;
+                    canvasImage.image(drawCanvas);
+
+                    if (layer.get('Group').length > 0) {
+                        for(var i = layer.get('Group').length - 1; i >= 0 ; i--) {
+                            layer.get('Group')[i].destroy();;
+                        }
+                        currentGroup = null;
+                        mouseIsInGroup = false;
+                    }
+                    layer.draw();
+                };
             }
         }
     };
@@ -132,8 +147,8 @@
                 width: startX <= endX ? endX - startX : startX - endX,
                 height: startY <= endY ? endY - startY : startY -endY,
                 stroke: 'red',
-                strokeWidth: 1,
-                dash: [5, 5]
+                strokeWidth: 1
+//                dash: [5, 5]
             });
             rect.on('mouseover', function () {
                 document.body.style.cursor = 'move';
@@ -217,7 +232,7 @@
         context.rect(startX + offsetX, startY + offsetY, width, height);
         context.lineWidth = 1;
         context.strokeStyle = 'red';
-        context.setLineDash([5,5]);
+//        context.setLineDash([5,5]);
         context.stroke();
         layer.draw();
     }
@@ -392,9 +407,12 @@
     window.addEventListener('keydown',check,true);
     document.oncontextmenu = function(){return false;};
     function check(e) {
+        var key = event.which || event.keyCode;
         if (currentGroup) {
-            var key = event.which || event.keyCode;
             var rect = currentGroup.get('Rect')[0];
+            var rectRatio = rect.width()/rect.height();
+            var wOffset = rectRatio > 1 ? rectRatio : 1 ;
+            var hOffset = rectRatio > 1 ? 1 : rectRatio;
             var topLeft = currentGroup.get('.topLeft')[0];
             var topRight = currentGroup.get('.topRight')[0];
             var bottomRight = currentGroup.get('.bottomRight')[0];
@@ -406,71 +424,79 @@
             switch (key) {
                 case 37://←
                     if ((minX + 1) <= currentGroup.getX())
-                        currentGroup.setX(currentGroup.getX()-1);
+                        currentGroup.setX(currentGroup.getX() - 1);
                     break;
                 case 38://↑
                     if ((minY + 1) <= currentGroup.getY())
-                        currentGroup.setY(currentGroup.getY()-1);
+                        currentGroup.setY(currentGroup.getY() - 1);
                     break;
                 case 39://→
                     if (currentGroup.getX() <= (maxX - 1))
-                        currentGroup.setX(currentGroup.getX()+1);
+                        currentGroup.setX(currentGroup.getX() + 1);
                     break;
                 case 40://↓
                     if (currentGroup.getY() <= (maxY - 1))
-                        currentGroup.setY(currentGroup.getY()+1);
+                        currentGroup.setY(currentGroup.getY() + 1);
                     break;
                 case 67://c
                     if ((minX + 1) <= currentGroup.getX()) {
-                        topLeft.setX(topLeft.getX()-1);
-                        bottomLeft.setX(bottomLeft.getX()-1);
+                        topLeft.setX(topLeft.getX() - 1);
+                        bottomLeft.setX(bottomLeft.getX() - 1);
+                        update(topLeft);
+                        layer.draw();
                     }
                     if ((minY + 1) <= currentGroup.getY()) {
-                        topLeft.setY(topLeft.getY()-1);
-                        topRight.setY(topRight.getY()-1);
+                        topLeft.setY(topLeft.getY() - 1);
+                        topRight.setY(topRight.getY()  -1);
+                        update(topLeft);
+                        layer.draw();
                     }
                     if (currentGroup.getX() <= (maxX - 1)) {
-                        topRight.setX(topRight.getX()+1);
-                        bottomRight.setX(bottomRight.getX()+1);
+                        topRight.setX(topRight.getX() + 1);
+                        bottomRight.setX(bottomRight.getX() + 1);
+                        update(topLeft);
+                        layer.draw();
                     }
                     if (currentGroup.getY() <= (maxY - 1)) {
-                        bottomLeft.setY(bottomLeft.getY()+1);
-                        bottomRight.setY(bottomRight.getY()+1);
+                        bottomLeft.setY(bottomLeft.getY() + 1);
+                        bottomRight.setY(bottomRight.getY() + 1);
+                        update(topLeft);
+                        layer.draw();
                     }
-                    update(topLeft);
-                    layer.draw();
                     break;
                 case 68://d
-                    if (topLeft.getX() + 2 <= topRight.getX()) {
-                        topLeft.setX(topLeft.getX()+1);
-                        topRight.setX(topRight.getX()-1);
-                        bottomLeft.setX(bottomLeft.getX()+1);
-                        bottomRight.setX(bottomRight.getX()-1);
+                    if (topLeft.getX() + wOffset * 2 <= topRight.getX()) {
+                        topLeft.setX(topLeft.getX() + wOffset);
+                        topRight.setX(topRight.getX() - wOffset);
+                        bottomLeft.setX(bottomLeft.getX() + wOffset);
+                        bottomRight.setX(bottomRight.getX() - wOffset);
+                        update(topLeft);
+                        update(topRight);
+                        update(bottomLeft);
+                        update(bottomRight);
+                        layer.draw();
                     }
-                    if (topLeft.getY() + 2 <= bottomLeft.getY()) {
-                        topLeft.setY(topLeft.getY()+1);
-                        topRight.setY(topRight.getY()+1);
-                        bottomLeft.setY(bottomLeft.getY()-1);
-                        bottomRight.setY(bottomRight.getY()-1);
+                    if (topLeft.getY() + hOffset * 2 <= bottomLeft.getY()) {
+                        topLeft.setY(topLeft.getY() + hOffset);
+                        topRight.setY(topRight.getY() + hOffset);
+                        bottomLeft.setY(bottomLeft.getY() - hOffset);
+                        bottomRight.setY(bottomRight.getY() - hOffset);
+                        update(topLeft);
+                        update(topRight);
+                        update(bottomLeft);
+                        update(bottomRight);
+                        layer.draw();
                     }
-                    update(topLeft);
-                    update(topRight);
-                    update(bottomLeft);
-                    update(bottomRight);
-                    layer.draw();
                     break;
                 case 65://a
                     break;
-                case 83://s
-//                    imageObj.src = 'http://www.bz55.com/uploads/allimg/150306/139-1503061IR6.jpg';
-//                    layer.remove('Group');
-//                    currentGroup = null;
-//                    layer.draw();
-//                    demarcate.methods.stageCanvas();
-                    break;
-
             }
+            console.log("originX:", currentGroup.getX()*zoomRatio, "originY:", currentGroup.getY()*zoomRatio);
             layer.draw();
+        }
+        if (key == 83) {//s
+            //Load next image here!!
+            imageObj.src = 'https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1499218671&di=fd164f94176ec4ee982db63abffe0df9&imgtype=jpg&er=1&src=http%3A%2F%2Fbizhi.zhuoku.com%2F2013%2F07%2F22%2Fhua%2Fyihuayishijie68.jpg';
         }
 //                alert(e.keyCode);
     }
