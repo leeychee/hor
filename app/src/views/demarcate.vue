@@ -168,7 +168,7 @@
                             var rectGroup = new Konva.Group({
                                 x: group.x,
                                 y: group.y,
-                                draggable: true,
+                                draggable: false,
                                 dragBoundFunc: function (pos) {
                                     var X=pos.x;
                                     var Y=pos.y;
@@ -193,21 +193,25 @@
                                 if(e.evt.button == 2){
                                     if (currentGroup == this){
                                         currentGroup = null;
+                                        this.destroy();
+                                        layer.draw();
+                                        mouseIsInGroup = false;
                                     }
-                                    this.destroy();
-                                    layer.draw();
-                                    mouseIsInGroup = false;
                                 }
                             });
-                            rect.on("click", function () {
-                                for(var i = 0; i < layer.get('Group').length; i++) {
-                                    var group = layer.get('Group')[i];
-                                    var rect = group.get('Rect')[0];
-                                    rect.setStroke('red');
+                            rect.on("click", function (e) {
+                                if(e.evt.button == 0){
+                                    var w1 = startX <= endX ? endX - startX : startX - endX;
+                                    var h1 = startY <= endY ? endY - startY : startY - endY;
+                                    if(w1 < 60 && h1 < 60) {
+                                        for (var i = 0; i < layer.get('Group').length; i++) {
+                                            layer.get('Group')[i].get('Rect')[0].setStroke('red');
+                                        }
+                                        this.stroke('yellow');
+                                        layer.draw();
+                                        currentGroup = this.getParent();
+                                    }
                                 }
-                                this.stroke('yellow');
-                                layer.draw();
-                                currentGroup = this.getParent();
                             });
                             rectGroup.add(rect);
                             layer.add(rectGroup);
@@ -228,17 +232,15 @@
     var mouseIsDown, mouseIsInGroup;
 
     function mouseDown(eve) {
-        if (!mouseIsInGroup) {
             mouseIsDown = true;
             var pos = getMousePos(drawCanvas, eve);
             startX = endX = pos.x;
             startY = endY = pos.y;
             drawSquare(); //update
-        }
     }
 
     function mouseXY(eve) {
-        if (mouseIsDown && !mouseIsInGroup) {
+        if (mouseIsDown ) {
             var pos = getMousePos(drawCanvas, eve);
             endX = pos.x;
             endY = pos.y;
@@ -247,80 +249,88 @@
     }
 
     function mouseUp(eve) {
-        if (mouseIsDown && !mouseIsInGroup) {
+        var pos = getMousePos(drawCanvas, eve);
+        endX = pos.x;
+        endY = pos.y;
+        var w = startX <= endX ? endX - startX : startX - endX;
+        var h = startY <= endY ? endY - startY : startY - endY;
+        if (mouseIsDown) {
             mouseIsDown = false;
-            var pos = getMousePos(drawCanvas, eve);
-            endX = pos.x;
-            endY = pos.y;
             drawSquare(); //update on mouse-up
 
-            var rect = new Konva.Rect({
-                width: startX <= endX ? endX - startX : startX - endX,
-                height: startY <= endY ? endY - startY : startY -endY,
-                stroke: 'red',
-                strokeWidth: 1
-            });
-            rect.on('mouseover', function () {
-                document.body.style.cursor = 'move';
-            });
-            rect.on('mouseout', function () {
-                document.body.style.cursor = 'default';
-            });
+            if (w >= 60 || h >= 60) {
+                var rect = new Konva.Rect({
+                    width: w,
+                    height: h,
+                    stroke: 'red',
+                    strokeWidth: 1
+                });
+                rect.on('mouseover', function () {
+                    document.body.style.cursor = 'move';
+                });
+                rect.on('mouseout', function () {
+                    document.body.style.cursor = 'default';
+                });
 
-            var minX = drawCanvas.getBoundingClientRect().left;
-            var maxX = drawCanvas.getBoundingClientRect().left + imgStageWidth - rect.width();
-            var minY = drawCanvas.getBoundingClientRect().top;
-            var maxY = drawCanvas.getBoundingClientRect().top + imgStageHeight - rect.height();
-            var rectGroup = new Konva.Group({
-                x: startX <= endX ? startX : endX,
-                y: startY <= endY ? startY : endY,
-                draggable: true,
-                dragBoundFunc: function (pos) {
-                    var X=pos.x;
-                    var Y=pos.y;
-                    if(X<minX){X=minX;}
-                    if(X>maxX){X=maxX;}
-                    if(Y<minY){Y=minY;}
-                    if(Y>maxY){Y=maxY;}
-                    return({x:X, y:Y});
-                }
-            });
-            rectGroup.on('dragmove', function () {
-//                console.log("x:" + this.getX(), "y:" + this.getY());
-                console.log("originX:", Math.round(this.getX()*zoomRatio), "originY:", Math.round(this.getY()*zoomRatio));
-            });
-            rectGroup.on('mouseover', function () {
-                mouseIsInGroup = true;
-            });
-            rectGroup.on('mouseout', function () {
-                mouseIsInGroup = false;
-            });
-            rectGroup.on('mousedown', function (e) {
-                if(e.evt.button == 2){
-                    if (currentGroup == this){
-                        currentGroup = null;
+                var minX = drawCanvas.getBoundingClientRect().left;
+                var maxX = drawCanvas.getBoundingClientRect().left + imgStageWidth - rect.width();
+                var minY = drawCanvas.getBoundingClientRect().top;
+                var maxY = drawCanvas.getBoundingClientRect().top + imgStageHeight - rect.height();
+                var rectGroup = new Konva.Group({
+                    x: startX <= endX ? startX : endX,
+                    y: startY <= endY ? startY : endY,
+                    draggable: false,
+                    dragBoundFunc: function (pos) {
+                        var X=pos.x;
+                        var Y=pos.y;
+                        if(X<minX){X=minX;}
+                        if(X>maxX){X=maxX;}
+                        if(Y<minY){Y=minY;}
+                        if(Y>maxY){Y=maxY;}
+                        return({x:X, y:Y});
                     }
-                    this.destroy();
-                    layer.draw();
+                });
+                rectGroup.on('dragmove', function () {
+    //                console.log("x:" + this.getX(), "y:" + this.getY());
+                    console.log("originX:", Math.round(this.getX()*zoomRatio), "originY:", Math.round(this.getY()*zoomRatio));
+                });
+                rectGroup.on('mouseover', function () {
+                    mouseIsInGroup = true;
+                });
+                rectGroup.on('mouseout', function () {
                     mouseIsInGroup = false;
-                }
-            });
-            rect.on("click", function () {
-                for(var i = 0; i < layer.get('Group').length; i++) {
-                    var group = layer.get('Group')[i];
-                    var rect = group.get('Rect')[0];
-                    rect.setStroke('red');
-                }
-                this.stroke('yellow');
-                layer.draw();
-                currentGroup = this.getParent();
-            });
-            rectGroup.add(rect);
-            layer.add(rectGroup);
-            addAnchor(rectGroup, 0, 0, 'topLeft');
-            addAnchor(rectGroup, startX <= endX ? endX - startX : startX - endX, 0, 'topRight');
-            addAnchor(rectGroup, 0, startY <= endY ? endY - startY : startY -endY, 'bottomLeft');
-            addAnchor(rectGroup, startX <= endX ? endX - startX : startX - endX, startY <= endY ? endY - startY : startY -endY, 'bottomRight');
+                });
+                rectGroup.on('mousedown', function (e) {
+                    if(e.evt.button == 2){
+                        if (currentGroup == this){
+                            currentGroup = null;
+                            this.destroy();
+                            layer.draw();
+                            mouseIsInGroup = false;
+                        }
+                    }
+                });
+                rect.on("click", function (e) {
+                    if(e.evt.button == 0){
+                        var w1 = startX <= endX ? endX - startX : startX - endX;
+                        var h1 = startY <= endY ? endY - startY : startY - endY;
+                        if(w1 < 60 && h1 < 60) {
+                            for(var i = 0; i < layer.get('Group').length; i++) {
+                                layer.get('Group')[i].get('Rect')[0].setStroke('red');
+                            }
+                            this.stroke('yellow');
+                            layer.draw();
+                            currentGroup = this.getParent();
+                        }
+                    }
+                });
+                rectGroup.add(rect);
+                layer.add(rectGroup);
+                addAnchor(rectGroup, 0, 0, 'topLeft');
+                addAnchor(rectGroup, w, 0, 'topRight');
+                addAnchor(rectGroup, 0, h, 'bottomLeft');
+                addAnchor(rectGroup, w, h, 'bottomRight');
+            }
 
             context.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
             layer.draw();
@@ -481,11 +491,11 @@
             layer.draw();
         });
         anchor.on('mousedown touchstart', function () {
-            group.setDraggable(false);
+//            group.setDraggable(false);
             this.moveToTop();
         });
         anchor.on('dragend', function () {
-            group.setDraggable(true);
+//            group.setDraggable(true);
             layer.draw();
         });
         // add hover styling
@@ -521,8 +531,9 @@
         if (currentGroup) {
             var rect = currentGroup.get('Rect')[0];
             var rectRatio = rect.width()/rect.height();
-            var wOffset = rectRatio > 1 ? rectRatio : 1 ;
-            var hOffset = rectRatio > 1 ? 1 : rectRatio;
+            var wOffset = rectRatio > 1 ? rectRatio : 1;
+            var hOffset = rectRatio > 1 ? 1 : 1/rectRatio;
+            console.log("wOffset:",wOffset," hOffset:",hOffset);
             var topLeft = currentGroup.get('.topLeft')[0];
             var topRight = currentGroup.get('.topRight')[0];
             var bottomRight = currentGroup.get('.bottomRight')[0];
@@ -598,14 +609,22 @@
                         layer.draw();
                     }
                     break;
+                case 88://x
+                    currentGroup.destroy();
+                    currentGroup = null;
+                    layer.draw();
+                    mouseIsInGroup = false;
+                    break;
             }
-            console.log("originX:", Math.round(currentGroup.getX()*zoomRatio), "originY:", Math.round(currentGroup.getY()*zoomRatio));
+            if (currentGroup) {
+                console.log("originX:", Math.round(currentGroup.getX()*zoomRatio), "originY:", Math.round(currentGroup.getY()*zoomRatio));
+            }
             layer.draw();
         }
         //下一张
         if (key == 68) {//d
+            var tags = [];
             if (layer.get('Group').length > 0) {
-                let tags = [];
                 for(var i = 0; i < layer.get('Group').length; i++) {
                     var group = layer.get('Group')[i];
                     var rect = group.get('Rect')[0];
@@ -618,56 +637,54 @@
                         "type": "car"
                     });
                 }
-                console.log("tags:", tags);
-                Vue.http.post("/image/"+currentImageId+"/_tag", {"objects": tags}).then(res => {
-                    console.log("after tag: ", res.body);
-                    let obj = res.body;
-                    if (obj.status == "ok") {
-                        //Load next image here!!
-                        if(imageIds[gIndex + 1]) {
-                            Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
-                                let o = res.body;
-                                echoGroups = o.objects;
-                                currentImageId = o.id;
-                                gIndex++;
-                                imageObj.src = "/f/P_" + o.path;
-                                console.log("/image/:id : ", res.body);
-                            }, err => {
-                                console.log("error /image/:id : ", err);
-                            });
-                        } else {
-                            Vue.http.get('/images/_next').then(resp => {
-                                console.log(resp.body);
-                                let o = resp.body;
-                                echoGroups = null;
-                                currentImageId = o.id;
-                                imageIds.push(currentImageId);
-                                gIndex = imageIds.length - 1;
-                                console.log(imageIds);
-                                imageObj.src = "/f/P_" + o.path;
-                            }, error => {
-                                if (error.ok == false) {
-                                    switch (error.status) {
-                                        case 404:
-                                            alert("没有更多图片了！");
-                                        break;
-                                    }
-                                }
-                                console.log("image error: ", error);
-                            });
-                        }
-//                        imageObj.src = 'http://www.bz55.com/uploads/allimg/150306/139-1503061IR6.jpg';
-                    }
-                }, err => {
-                    console.log("tag error: ", err);
-                });
-            } else {
-
             }
+            console.log("tags:", tags);
+            Vue.http.post("/image/"+currentImageId+"/_tag", {"objects": tags}).then(res => {
+                console.log("after tag: ", res.body);
+                let obj = res.body;
+                if (obj.status == "ok") {
+                    //Load next image here!!
+                    if(imageIds[gIndex + 1]) {
+                        Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
+                            let o = res.body;
+                            echoGroups = o.objects;
+                            currentImageId = o.id;
+                            gIndex++;
+                            imageObj.src = "/f/P_" + o.path;
+                            console.log("/image/:id : ", res.body);
+                        }, err => {
+                            console.log("error /image/:id : ", err);
+                        });
+                    } else {
+                        Vue.http.get('/images/_next').then(resp => {
+                            console.log(resp.body);
+                            let o = resp.body;
+                            echoGroups = null;
+                            currentImageId = o.id;
+                            imageIds.push(currentImageId);
+                            gIndex = imageIds.length - 1;
+                            console.log(imageIds);
+                            imageObj.src = "/f/P_" + o.path;
+                        }, error => {
+                            if (error.ok == false) {
+                                switch (error.status) {
+                                    case 404:
+                                        alert("没有更多图片了！");
+                                    break;
+                                }
+                            }
+                            console.log("image error: ", error);
+                        });
+                    }
+//                        imageObj.src = 'http://www.bz55.com/uploads/allimg/150306/139-1503061IR6.jpg';
+                }
+            }, err => {
+                console.log("tag error: ", err);
+            });
         }
         if (key == 65) {
+            var tags = [];
             if (layer.get('Group').length > 0) {
-                let tags = [];
                 for(var i = 0; i < layer.get('Group').length; i++) {
                     var group = layer.get('Group')[i];
                     var rect = group.get('Rect')[0];
@@ -680,16 +697,16 @@
                         "type": "car"
                     });
                 }
-                console.log("tags:", tags);
-                Vue.http.post("/image/"+currentImageId+"/_tag", {"objects": tags}).then(res => {
-                    console.log("after tag: ", res.body);
-                    let obj = res.body;
-                    if (obj.status == "ok") {
-                    }
-                }, err => {
-                    console.log("tag error: ", err);
-                });
             }
+            console.log("tags:", tags);
+            Vue.http.post("/image/"+currentImageId+"/_tag", {"objects": tags}).then(res => {
+                console.log("after tag: ", res.body);
+                let obj = res.body;
+                if (obj.status == "ok") {
+                }
+            }, err => {
+                console.log("tag error: ", err);
+            });
             if(imageIds[gIndex - 1]) {
                 Vue.http.get("/image/" + imageIds[gIndex - 1]).then(res => {
                     let o = res.body;
@@ -703,6 +720,35 @@
                 });
             } else {
                 alert("已经是第一张图片了！");
+            }
+        }
+        if(key == 81) {
+            if (layer.get('Group').length > 0) {
+                if(currentGroup) {
+                    for (let i = 0; i < layer.get('Group').length; i++) {
+                        layer.get('Group')[i].get('Rect')[0].setStroke('red');
+                    }
+                    let j = layer.get('Group').indexOf(currentGroup);
+                    if (j < layer.get('Group').length - 1) {
+                        let nextGroup = layer.get('Group')[j + 1];
+                        nextGroup.get('Rect')[0].stroke('yellow');
+                        layer.draw();
+                        currentGroup = nextGroup;
+                    } else {
+                        let nextGroup = layer.get('Group')[0];
+                        nextGroup.get('Rect')[0].stroke('yellow');
+                        layer.draw();
+                        currentGroup = nextGroup;
+                    }
+                } else {
+                    for (let i = 0; i < layer.get('Group').length; i++) {
+                        layer.get('Group')[i].get('Rect')[0].setStroke('red');
+                    }
+                    let firstGroup = layer.get('Group')[0];
+                    firstGroup.get('Rect')[0].stroke('yellow');
+                    layer.draw();
+                    currentGroup = firstGroup;
+                }
             }
 
         }
