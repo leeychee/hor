@@ -34,7 +34,7 @@
     }
 
     .layout-header {
-        height: 60px;
+        height: 40px;
         background: #fff;
         box-shadow: 0 1px 1px rgba(0, 0, 0, .1);
     }
@@ -42,9 +42,9 @@
     .layout-logo-left {
         width: 100%;
         height: 40px;
-        /*background: #464c5b;*/
+        /*background: #112129;*/
         border-radius: 3px;
-        margin: 15px auto;
+        margin: 0 auto 10px;
         color: white;
     }
 
@@ -113,10 +113,10 @@
             </i-col>
             <i-col :span="spanMiddle">
                 <div v-if="showHeader" class="layout-header">
-                    <i-button type="text" @click="toggleLeftClick">
-                        <Icon type="navicon" size="32"></Icon>
-                    </i-button>
-                    <h1 style="display: inline;position: absolute;margin-top: 6px;">{{title}}</h1>
+                    <!--<i-button type="text" @click="toggleLeftClick">-->
+                        <!--<Icon type="navicon" size="32"></Icon>-->
+                    <!--</i-button>-->
+                    <h1 style="display: inline;position: absolute;margin-left: 10px;">{{title}}</h1>
 
                     <!--<i-button type="text" class="right-toggle-btn" :class="{'left-hide-right-toggle-btn': spanLeft < 4}" >-->
                     <!--<Icon type="navicon" size="32"></Icon>-->
@@ -156,9 +156,9 @@
             return {
                 title: "HOR",
                 logoSVG: logoUrl,
-                showHeader: false,
-                spanLeft: 2,
-                spanMiddle: 22,
+                showHeader: true,
+                spanLeft: 1,
+                spanMiddle: 23,
                 spanRight: 6,
                 columns2: [
                     {
@@ -264,22 +264,22 @@
                 console.log(d);
                 switch (d) {
                     case "1":
-                        this.$router.replace('/demarcate');
+                        this.$router.replace('demarcate');
                         this.title = "Demarcate";
                         break;
                     case "2":
-                        this.$router.replace('/review');
+                        this.$router.replace('review');
                         this.title = "Review";
                         break;
                     case "3":
-                        this.$router.replace('/export');
+                        this.$router.replace('export');
                         this.title = "Export";
                         break;
                 }
             }
         },
         mounted: function () {
-            this.$router.replace('/demarcate');
+            this.$router.replace('demarcate');
             this.title = "Demarcate";
         }
     };

@@ -23,16 +23,23 @@
 </template>
 <script>
     import Konva from 'konva';
+    import Vue from 'vue'
+    import VueResource from 'vue-resource'
+    Vue.use(VueResource);
     var stage,
         layer,
         drawCanvas,
         context,
         aspectRatio,//画布区域宽高比
         zoomRatio, //图片缩放比
+        currentImageId,
         imageObj,
         imgStageWidth,
         imgStageHeight,
-        currentGroup;
+        currentGroup,
+        echoGroups,//图片中已标记框框
+        imageIds = [],//图片id数组
+        gIndex = -1;//游标
     var demarcate =  {
         name: 'demarcate',
         data() {
@@ -52,8 +59,8 @@
             stageCanvas: function () {
                 stage = new Konva.Stage({
                     container: 'main',
-                    width: 11/12*window.innerWidth,
-                    height: window.innerHeight,
+                    width: 23/24*window.innerWidth,
+                    height: window.innerHeight - 40,
                 });
                 // add canvas element
                 layer = new Konva.Layer();
@@ -64,21 +71,14 @@
                 var yoda = new Konva.Image({
                     x: 0,
                     y: 0,
-//                    image: imageObj,
-//                    width: imgStageWidth,
-//                    height: imgStageHeight,
                 });
 
                 var canvasImage = new Konva.Image({
-//                    image: drawCanvas,
                     x: 0,
                     y: 0
                 });
                 layer.add(yoda);
                 layer.add(canvasImage);
-    //            layer.add(image);
-    //            layer.draw();
-    //            stage.draw();
 
                 drawCanvas = document.createElement('canvas');
                 context = drawCanvas.getContext("2d");
@@ -87,7 +87,39 @@
                 stage.addEventListener("mousemove", mouseXY, false);
                 stage.addEventListener("mouseup", mouseUp, false);
 
-                imageObj.src = 'http://www.bz55.com/uploads/allimg/150306/139-1503061IR6.jpg';
+                if(imageIds[gIndex + 1]) {
+                    Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
+                        let o = res.body;
+                        echoGroups = o.objects;
+                        currentImageId = o.id;
+                        gIndex++;
+                        imageObj.src = "/f/P_" + o.path;
+                        console.log("/image/:id : ", res.body);
+                    }, err => {
+                        console.log("error /image/:id : ", err);
+                    });
+                } else {
+                    Vue.http.get('/images/_next').then(resp => {
+                        console.log(resp.body);
+                        let obj = resp.body;
+                        echoGroups = null;
+                        currentImageId = obj.id;
+                        imageIds.push(currentImageId);
+                        gIndex = imageIds.length - 1;
+                        console.log(imageIds);
+                        imageObj.src = "/f/P_" + obj.path;
+                    }, error => {
+                        if (error.ok == false) {
+                            switch (error.status) {
+                                case 404:
+                                    alert("已经是最后一张图片了");
+                                break;
+                            }
+                        }
+                        console.log("image error: ", error);
+                    });
+                }
+//                imageObj.src = 'http://www.bz55.com/uploads/allimg/150306/139-1503061IR6.jpg';
                 imageObj.onload = function () {
                     aspectRatio = stage.width()/stage.height();
                     imgStageWidth = imageObj.width/imageObj.height >= aspectRatio ? stage.width() : imageObj.width/imageObj.height*stage.height();
@@ -102,11 +134,90 @@
                     canvasImage.image(drawCanvas);
 
                     if (layer.get('Group').length > 0) {
-                        for(var i = layer.get('Group').length - 1; i >= 0 ; i--) {
-                            layer.get('Group')[i].destroy();;
+                        for(var i = layer.get('Group').length - 1; i >= 0; i--) {
+                            layer.get('Group')[i].destroy();
                         }
                         currentGroup = null;
                         mouseIsInGroup = false;
+                    }
+                    if (echoGroups) {
+                        for (var j = 0; j < echoGroups.length; j++) {
+                            var group = echoGroups[j];
+                            group.x = group.x / zoomRatio;
+                            group.y = group.y / zoomRatio;
+                            group.w = group.w / zoomRatio;
+                            group.h = group.h / zoomRatio;
+                            console.log("each group:", group);
+                            var rect = new Konva.Rect({
+                                width: group.w,
+                                height: group.h,
+                                stroke: 'red',
+                                strokeWidth: 1
+                            });
+                            rect.on('mouseover', function () {
+                                document.body.style.cursor = 'move';
+                            });
+                            rect.on('mouseout', function () {
+                                document.body.style.cursor = 'default';
+                            });
+
+                            var minX = drawCanvas.getBoundingClientRect().left;
+                            var maxX = drawCanvas.getBoundingClientRect().left + imgStageWidth - rect.width();
+                            var minY = drawCanvas.getBoundingClientRect().top;
+                            var maxY = drawCanvas.getBoundingClientRect().top + imgStageHeight - rect.height();
+                            var rectGroup = new Konva.Group({
+                                x: group.x,
+                                y: group.y,
+                                draggable: true,
+                                dragBoundFunc: function (pos) {
+                                    var X=pos.x;
+                                    var Y=pos.y;
+                                    if(X<minX){X=minX;}
+                                    if(X>maxX){X=maxX;}
+                                    if(Y<minY){Y=minY;}
+                                    if(Y>maxY){Y=maxY;}
+                                    return({x:X, y:Y});
+                                }
+                            });
+                            rectGroup.on('dragmove', function () {
+                //                console.log("x:" + this.getX(), "y:" + this.getY());
+                                console.log("originX:", Math.round(this.getX()*zoomRatio), "originY:", Math.round(this.getY()*zoomRatio));
+                            });
+                            rectGroup.on('mouseover', function () {
+                                mouseIsInGroup = true;
+                            });
+                            rectGroup.on('mouseout', function () {
+                                mouseIsInGroup = false;
+                            });
+                            rectGroup.on('mousedown', function (e) {
+                                if(e.evt.button == 2){
+                                    if (currentGroup == this){
+                                        currentGroup = null;
+                                    }
+                                    this.destroy();
+                                    layer.draw();
+                                    mouseIsInGroup = false;
+                                }
+                            });
+                            rect.on("click", function () {
+                                for(var i = 0; i < layer.get('Group').length; i++) {
+                                    var group = layer.get('Group')[i];
+                                    var rect = group.get('Rect')[0];
+                                    rect.setStroke('red');
+                                }
+                                this.stroke('yellow');
+                                layer.draw();
+                                currentGroup = this.getParent();
+                            });
+                            rectGroup.add(rect);
+                            layer.add(rectGroup);
+                            addAnchor(rectGroup, 0, 0, 'topLeft');
+                            addAnchor(rectGroup, group.w, 0, 'topRight');
+                            addAnchor(rectGroup, 0, group.h, 'bottomLeft');
+                            addAnchor(rectGroup, group.w, group.h, 'bottomRight');
+                            context.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+                            layer.draw();
+                        }
                     }
                     layer.draw();
                 };
@@ -148,7 +259,6 @@
                 height: startY <= endY ? endY - startY : startY -endY,
                 stroke: 'red',
                 strokeWidth: 1
-//                dash: [5, 5]
             });
             rect.on('mouseover', function () {
                 document.body.style.cursor = 'move';
@@ -177,7 +287,7 @@
             });
             rectGroup.on('dragmove', function () {
 //                console.log("x:" + this.getX(), "y:" + this.getY());
-                console.log("originX:", this.getX()*zoomRatio, "originY:", this.getY()*zoomRatio);
+                console.log("originX:", Math.round(this.getX()*zoomRatio), "originY:", Math.round(this.getY()*zoomRatio));
             });
             rectGroup.on('mouseover', function () {
                 mouseIsInGroup = true;
@@ -195,7 +305,7 @@
                     mouseIsInGroup = false;
                 }
             });
-            rect.on('click', function () {
+            rect.on("click", function () {
                 for(var i = 0; i < layer.get('Group').length; i++) {
                     var group = layer.get('Group')[i];
                     var rect = group.get('Rect')[0];
@@ -207,10 +317,10 @@
             });
             rectGroup.add(rect);
             layer.add(rectGroup);
-                addAnchor(rectGroup, 0, 0, 'topLeft');
-                addAnchor(rectGroup, startX <= endX ? endX - startX : startX - endX, 0, 'topRight');
-                addAnchor(rectGroup, 0, startY <= endY ? endY - startY : startY -endY, 'bottomLeft');
-                addAnchor(rectGroup, startX <= endX ? endX - startX : startX - endX, startY <= endY ? endY - startY : startY -endY, 'bottomRight');
+            addAnchor(rectGroup, 0, 0, 'topLeft');
+            addAnchor(rectGroup, startX <= endX ? endX - startX : startX - endX, 0, 'topRight');
+            addAnchor(rectGroup, 0, startY <= endY ? endY - startY : startY -endY, 'bottomLeft');
+            addAnchor(rectGroup, startX <= endX ? endX - startX : startX - endX, startY <= endY ? endY - startY : startY -endY, 'bottomRight');
 
             context.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
             layer.draw();
@@ -297,7 +407,7 @@
 //        console.log("bottomLeft.getX():"+bottomLeft.getX(),"bottomLeft.getY():"+bottomLeft.getY());
 //        console.log("bottomRight.getX():"+bottomRight.getX(),"bottomRight.getY():"+bottomRight.getY());
         console.log("width:" + width, "height:" + height);
-        console.log("originWidth:", width*zoomRatio, "originHeight:", height*zoomRatio);
+        console.log("originWidth:", Math.round(width*zoomRatio), "originHeight:", Math.round(height*zoomRatio));
         rect.width(width);
         rect.height(height);
         var minX = drawCanvas.getBoundingClientRect().left;
@@ -438,7 +548,7 @@
                     if (currentGroup.getY() <= (maxY - 1))
                         currentGroup.setY(currentGroup.getY() + 1);
                     break;
-                case 67://c
+                case 87://w
                     if ((minX + 1) <= currentGroup.getX()) {
                         topLeft.setX(topLeft.getX() - 1);
                         bottomLeft.setX(bottomLeft.getX() - 1);
@@ -464,7 +574,7 @@
                         layer.draw();
                     }
                     break;
-                case 68://d
+                case 83://s
                     if (topLeft.getX() + wOffset * 2 <= topRight.getX()) {
                         topLeft.setX(topLeft.getX() + wOffset);
                         topRight.setX(topRight.getX() - wOffset);
@@ -488,15 +598,113 @@
                         layer.draw();
                     }
                     break;
-                case 65://a
-                    break;
             }
-            console.log("originX:", currentGroup.getX()*zoomRatio, "originY:", currentGroup.getY()*zoomRatio);
+            console.log("originX:", Math.round(currentGroup.getX()*zoomRatio), "originY:", Math.round(currentGroup.getY()*zoomRatio));
             layer.draw();
         }
-        if (key == 83) {//s
-            //Load next image here!!
-            imageObj.src = 'https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1499218671&di=fd164f94176ec4ee982db63abffe0df9&imgtype=jpg&er=1&src=http%3A%2F%2Fbizhi.zhuoku.com%2F2013%2F07%2F22%2Fhua%2Fyihuayishijie68.jpg';
+        //下一张
+        if (key == 68) {//d
+            if (layer.get('Group').length > 0) {
+                let tags = [];
+                for(var i = 0; i < layer.get('Group').length; i++) {
+                    var group = layer.get('Group')[i];
+                    var rect = group.get('Rect')[0];
+
+                    tags.push({
+                        "x": Math.round(group.getX() * zoomRatio),
+                        "y": Math.round(group.getY() * zoomRatio),
+                        "w": Math.round(rect.width() * zoomRatio),
+                        "h": Math.round(rect.height() * zoomRatio),
+                        "type": "car"
+                    });
+                }
+                console.log("tags:", tags);
+                Vue.http.post("/image/"+currentImageId+"/_tag", {"objects": tags}).then(res => {
+                    console.log("after tag: ", res.body);
+                    let obj = res.body;
+                    if (obj.status == "ok") {
+                        //Load next image here!!
+                        if(imageIds[gIndex + 1]) {
+                            Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
+                                let o = res.body;
+                                echoGroups = o.objects;
+                                currentImageId = o.id;
+                                gIndex++;
+                                imageObj.src = "/f/P_" + o.path;
+                                console.log("/image/:id : ", res.body);
+                            }, err => {
+                                console.log("error /image/:id : ", err);
+                            });
+                        } else {
+                            Vue.http.get('/images/_next').then(resp => {
+                                console.log(resp.body);
+                                let o = resp.body;
+                                echoGroups = null;
+                                currentImageId = o.id;
+                                imageIds.push(currentImageId);
+                                gIndex = imageIds.length - 1;
+                                console.log(imageIds);
+                                imageObj.src = "/f/P_" + o.path;
+                            }, error => {
+                                if (error.ok == false) {
+                                    switch (error.status) {
+                                        case 404:
+                                            alert("没有更多图片了！");
+                                        break;
+                                    }
+                                }
+                                console.log("image error: ", error);
+                            });
+                        }
+//                        imageObj.src = 'http://www.bz55.com/uploads/allimg/150306/139-1503061IR6.jpg';
+                    }
+                }, err => {
+                    console.log("tag error: ", err);
+                });
+            } else {
+
+            }
+        }
+        if (key == 65) {
+            if (layer.get('Group').length > 0) {
+                let tags = [];
+                for(var i = 0; i < layer.get('Group').length; i++) {
+                    var group = layer.get('Group')[i];
+                    var rect = group.get('Rect')[0];
+
+                    tags.push({
+                        "x": Math.round(group.getX() * zoomRatio),
+                        "y": Math.round(group.getY() * zoomRatio),
+                        "w": Math.round(rect.width() * zoomRatio),
+                        "h": Math.round(rect.height() * zoomRatio),
+                        "type": "car"
+                    });
+                }
+                console.log("tags:", tags);
+                Vue.http.post("/image/"+currentImageId+"/_tag", {"objects": tags}).then(res => {
+                    console.log("after tag: ", res.body);
+                    let obj = res.body;
+                    if (obj.status == "ok") {
+                    }
+                }, err => {
+                    console.log("tag error: ", err);
+                });
+            }
+            if(imageIds[gIndex - 1]) {
+                Vue.http.get("/image/" + imageIds[gIndex - 1]).then(res => {
+                    let o = res.body;
+                    echoGroups = o.objects;
+                    currentImageId = o.id;
+                    gIndex--;
+                    imageObj.src = "/f/P_" + o.path;
+                    console.log("/image/:id : ", res.body);
+                }, err => {
+                    console.log("error /image/:id : ", err);
+                });
+            } else {
+                alert("已经是第一张图片了！");
+            }
+
         }
 //                alert(e.keyCode);
     }

@@ -25,9 +25,10 @@ func main() {
 	r := gin.Default()
 	r.Static("f", path)
 	r.Static("app", "app")
+	r.Static("dist", "app/dist")
 
 	r.GET("/", func(c *gin.Context) {
-		c.Redirect(302, "app/index.html")
+		c.Redirect(302, "app/")
 	})
 	// Rebuild db from the given path
 	r.POST("/manage/_rebuild", func(c *gin.Context) {
@@ -53,7 +54,8 @@ func main() {
 		_type := c.DefaultQuery("type", "tag")
 		img, err := store.NextImage(_type)
 		if err != nil {
-			c.JSON(500, gin.H{"status": err})
+			log.Printf(err.Error())
+			c.JSON(404, gin.H{"status": err})
 		} else {
 			c.JSON(200, img)
 		}

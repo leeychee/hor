@@ -5,6 +5,7 @@ import Routers from './router';
 import Vuex from 'vuex';
 import Util from './libs/util';
 import App from './app.vue';
+import VueResource from 'vue-resource';
 import 'iview/dist/styles/iview.css';
 
 
@@ -13,12 +14,13 @@ Vue.use(VueRouter);
 Vue.use(Vuex);
 
 Vue.use(iView);
+Vue.use(VueResource);
 
 
 
 // 路由配置
 const RouterConfig = {
-    mode: 'history',
+    mode: 'hash',
     routes: Routers
 };
 const router = new VueRouter(RouterConfig);
