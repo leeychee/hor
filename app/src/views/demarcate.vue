@@ -39,7 +39,8 @@
         currentGroup,
         echoGroups,//图片中已标记框框
         imageIds = [],//图片id数组
-        gIndex = -1;//游标
+        gIndex = -1,//游标
+        minRectSize = 60;
     var demarcate =  {
         name: 'demarcate',
         data() {
@@ -48,6 +49,22 @@
 //                stageHeight: window.innerHeight - 60,
 //                aspectRatio : this.stageWidth/this.stageHeight,
             };
+        },
+        props: ['minSize'],
+        created: function(){
+            console.log('type: ' + this.$route.params.type);
+        },
+        watch: {
+            minSize: function (val) {
+                minRectSize = val;
+            },
+            '$route.params.type': function(val){
+                console.log("route-type:",val);
+            },
+            '$route' (to, from) {
+              // 对路由变化作出响应...
+                console.log("to:",to,",from:",from);
+            }
         },
         mounted() {
             this.stageCanvas();
@@ -59,7 +76,7 @@
             stageCanvas: function () {
                 stage = new Konva.Stage({
                     container: 'main',
-                    width: 23/24*window.innerWidth,
+                    width: 22/24*window.innerWidth,
                     height: window.innerHeight - 40,
                 });
                 // add canvas element
@@ -139,6 +156,7 @@
                         }
                         currentGroup = null;
                         mouseIsInGroup = false;
+                        mouseIsOnCircle = false;
                     }
                     if (echoGroups) {
                         for (var j = 0; j < echoGroups.length; j++) {
@@ -155,7 +173,7 @@
                                 strokeWidth: 1
                             });
                             rect.on('mouseover', function () {
-                                document.body.style.cursor = 'move';
+                                document.body.style.cursor = 'default';
                             });
                             rect.on('mouseout', function () {
                                 document.body.style.cursor = 'default';
@@ -196,6 +214,7 @@
                                         this.destroy();
                                         layer.draw();
                                         mouseIsInGroup = false;
+                                        mouseIsOnCircle = false;
                                     }
                                 }
                             });
@@ -203,7 +222,7 @@
                                 if(e.evt.button == 0){
                                     var w1 = startX <= endX ? endX - startX : startX - endX;
                                     var h1 = startY <= endY ? endY - startY : startY - endY;
-                                    if(w1 < 60 && h1 < 60) {
+                                    if(w1 < minRectSize && h1 < minRectSize) {
                                         for (var i = 0; i < layer.get('Group').length; i++) {
                                             layer.get('Group')[i].get('Rect')[0].setStroke('red');
                                         }
@@ -229,18 +248,20 @@
         }
     };
     var startX, endX, startY, endY;
-    var mouseIsDown, mouseIsInGroup;
+    var mouseIsDown, mouseIsInGroup, mouseIsOnCircle;
 
     function mouseDown(eve) {
+        if (!mouseIsOnCircle) {
             mouseIsDown = true;
             var pos = getMousePos(drawCanvas, eve);
             startX = endX = pos.x;
             startY = endY = pos.y;
             drawSquare(); //update
+        }
     }
 
     function mouseXY(eve) {
-        if (mouseIsDown ) {
+        if (mouseIsDown && !mouseIsOnCircle ) {
             var pos = getMousePos(drawCanvas, eve);
             endX = pos.x;
             endY = pos.y;
@@ -254,11 +275,11 @@
         endY = pos.y;
         var w = startX <= endX ? endX - startX : startX - endX;
         var h = startY <= endY ? endY - startY : startY - endY;
-        if (mouseIsDown) {
+        if (mouseIsDown && !mouseIsOnCircle) {
             mouseIsDown = false;
             drawSquare(); //update on mouse-up
 
-            if (w >= 60 || h >= 60) {
+            if (w >= minRectSize || h >= minRectSize) {
                 var rect = new Konva.Rect({
                     width: w,
                     height: h,
@@ -266,7 +287,7 @@
                     strokeWidth: 1
                 });
                 rect.on('mouseover', function () {
-                    document.body.style.cursor = 'move';
+                    document.body.style.cursor = 'default';
                 });
                 rect.on('mouseout', function () {
                     document.body.style.cursor = 'default';
@@ -307,6 +328,7 @@
                             this.destroy();
                             layer.draw();
                             mouseIsInGroup = false;
+                            mouseIsOnCircle = false;
                         }
                     }
                 });
@@ -314,7 +336,7 @@
                     if(e.evt.button == 0){
                         var w1 = startX <= endX ? endX - startX : startX - endX;
                         var h1 = startY <= endY ? endY - startY : startY - endY;
-                        if(w1 < 60 && h1 < 60) {
+                        if(w1 < minRectSize && h1 < minRectSize) {
                             for(var i = 0; i < layer.get('Group').length; i++) {
                                 layer.get('Group')[i].get('Rect')[0].setStroke('red');
                             }
@@ -515,11 +537,13 @@
                     break;
             }
             this.strokeWidth(2);
+            mouseIsOnCircle = true;
             layer.draw();
         });
         anchor.on('mouseout', function () {
             document.body.style.cursor = 'default';
             this.strokeWidth(1);
+            mouseIsOnCircle = false;
             layer.draw();
         });
         group.add(anchor);
@@ -614,6 +638,7 @@
                     currentGroup = null;
                     layer.draw();
                     mouseIsInGroup = false;
+                    mouseIsOnCircle = false;
                     break;
             }
             if (currentGroup) {

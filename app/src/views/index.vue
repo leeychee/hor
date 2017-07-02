@@ -117,135 +117,71 @@
                         <!--<Icon type="navicon" size="32"></Icon>-->
                     <!--</i-button>-->
                     <h1 style="display: inline;position: absolute;margin-left: 10px;">{{title}}</h1>
-
+                    <div v-if="showRectSet" style="float: right;margin: 5px;">
+                        <h3 style="display: inline;">最小选框尺寸(px)：</h3>
+                        <Select v-model="minSize" size="small" style="width:100px;" @on-change="changeMinSize">
+                            <Option v-for="item in minList" :value="item.value" :key="item">{{ item.label }}</Option>
+                        </Select>
+                    </div>
                     <!--<i-button type="text" class="right-toggle-btn" :class="{'left-hide-right-toggle-btn': spanLeft < 4}" >-->
                     <!--<Icon type="navicon" size="32"></Icon>-->
                     <!--</i-button>-->
                 </div>
-                <!--<div class="layout-breadcrumb">-->
-                <!--<Breadcrumb>-->
-                <!--<Breadcrumb-item href="#">首页</Breadcrumb-item>-->
-                <!--<Breadcrumb-item href="#">应用中心</Breadcrumb-item>-->
-                <!--<Breadcrumb-item>某应用</Breadcrumb-item>-->
-                <!--</Breadcrumb>-->
-                <!--</div>-->
                 <div class="layout-content">
-
-                    <router-view></router-view>
-                    <!--<div class="resize-container">-->
-                    <!--<div class="resize-drag">-->
-                    <!--Resize from any edge or corner-->
-                    <!--</div>-->
-                    <!--</div>-->
+                    <router-view :minSize.sync="minSize" :key="key"></router-view>
                 </div>
-
-                <!--<div class="layout-copy">-->
-                <!--2000-2017 &copy; SunCreate.-->
-                <!--</div>-->
             </i-col>
-            <!--<i-col :span="spanRight" :offset="18" style="position: fixed;z-index: 9999;">-->
-            <!--<Table width="auto" height="auto" :columns="columns2" :data="data3"></Table>-->
-            <!--</i-col>-->
         </Row>
     </div>
 </template>
 <script>
     import logoUrl from '../static/img/hor.svg'
+    import demarcate from './demarcate.vue'
     export default {
         data () {
             return {
                 title: "HOR",
                 logoSVG: logoUrl,
                 showHeader: true,
-                spanLeft: 1,
-                spanMiddle: 23,
+                spanLeft: 2,
+                spanMiddle: 22,
                 spanRight: 6,
-                columns2: [
+                minList: [
                     {
-                        title: '序号',
-                        key: 'index',
-                        width: 60,
-                        fixed: 'left',
-                        className: 'table-info-column'
+                        value: '10',
+                        label: '10'
                     },
                     {
-                        title: 'x',
-                        key: 'xAxis',
-                        width: 60
+                        value: '20',
+                        label: '20'
                     },
                     {
-                        title: 'y',
-                        key: 'yAxis',
-                        width: 60
+                        value: '30',
+                        label: '30'
                     },
                     {
-                        title: 'w',
-                        key: 'width',
-                        width: 60
+                        value: '40',
+                        label: '40'
                     },
                     {
-                        title: 'h',
-                        key: 'height',
-                        width: 60
+                        value: '50',
+                        label: '50'
                     },
                     {
-                        title: '操作',
-                        key: 'action',
-                        fixed: 'right',
-                        width: 120,
-                        render: (h, params) => {
-                            return h('div', [
-                                h('Button', {
-                                    props: {
-                                        type: 'text',
-                                        size: 'small'
-                                    }
-                                }, '编辑'),
-                                h('Button', {
-                                    props: {
-                                        type: 'text',
-                                        size: 'small'
-                                    }
-                                }, '删除')
-                            ]);
-                        }
+                        value: '60',
+                        label: '60'
                     }
                 ],
-                data3: [
-                    {
-                        index: '1',
-                        xAxis: 10,
-                        yAxis: 10,
-                        width: 50,
-                        height: 50
-                    },
-                    {
-                        index: '2',
-                        xAxis: 30,
-                        yAxis: 10,
-                        width: 30,
-                        height: 50
-                    },
-                    {
-                        index: '3',
-                        xAxis: 15,
-                        yAxis: 100,
-                        width: 50,
-                        height: 50
-                    },
-                    {
-                        index: '4',
-                        xAxis: 210,
-                        yAxis: 10,
-                        width: 20,
-                        height: 120
-                    }
-                ]
+                minSize: '60',
+                showRectSet: true
             }
         },
         computed: {
             iconSize () {
                 return this.spanLeft === 4 ? 24 : 32;
+            },
+            key() {
+                return this.$route.name !== undefined? this.$route.name +new Date(): this.$route +new Date()
             }
         },
         methods: {
@@ -261,25 +197,32 @@
                 }
             },
             onSelect (d){
-                console.log(d);
                 switch (d) {
                     case "1":
-                        this.$router.replace('demarcate');
+//                        this.$router.replace('demarcate');
+                        this.$router.replace({ name: 'demarcate', params: { type: 'd' }});
                         this.title = "Demarcate";
+                        this.showRectSet = true;
                         break;
                     case "2":
-                        this.$router.replace('review');
+//                        this.$router.replace('review');
+                        this.$router.replace({ name: 'demarcate', params: { type: 'r' }});
                         this.title = "Review";
+                        this.showRectSet = false;
                         break;
                     case "3":
-                        this.$router.replace('export');
+                        this.$router.replace({ name: 'export'});
                         this.title = "Export";
+                        this.showRectSet = false;
                         break;
                 }
+            },
+            changeMinSize (val) {
             }
         },
         mounted: function () {
-            this.$router.replace('demarcate');
+//            this.$router.replace('demarcate');
+            this.$router.replace({ name: 'demarcate', params: { type: 'd' }});
             this.title = "Demarcate";
         }
     };

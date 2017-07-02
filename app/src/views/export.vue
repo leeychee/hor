@@ -1,7 +1,9 @@
 <style scoped>
 </style>
 <template>
-    <div>export</div>
+    <div style="text-align: center;margin-top: 100px;">
+        <Button type="info" size="large">导出xml</Button>
+    </div>
 </template>
 <script>
     export default {
