@@ -40,7 +40,8 @@
       echoGroups,//图片中已标记框框
       imageIds = [],//图片id数组
       gIndex = -1,//游标
-      minRectSize = 60;
+      minRectSize = 60,
+      opType;//demarcate:_next,review:_review
   var demarcate = {
     name: 'demarcate',
     data() {
@@ -52,7 +53,12 @@
     },
     props: ['minSize'],
     created: function () {
-      console.log('type: ' + this.$route.params.type);
+      console.log("type:" + this.$route.params.type);
+      if (this.$route.params.type == "r") {
+        opType = "_review";
+      } else {
+        opType = "_next";
+      }
     },
     watch: {
       minSize: function (val) {
@@ -116,7 +122,7 @@
             console.log("error /image/:id : ", err);
           });
         } else {
-          Vue.http.get('/images/_next').then(resp => {
+          Vue.http.get('/images/' + opType).then(resp => {
             console.log(resp.body);
             let obj = resp.body;
             echoGroups = null;
@@ -739,7 +745,7 @@
               console.log("error /image/:id : ", err);
             });
           } else {
-            Vue.http.get('/images/_next').then(resp => {
+            Vue.http.get('/images/' + opType).then(resp => {
               console.log(resp.body);
               let o = resp.body;
               echoGroups = null;

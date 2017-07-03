@@ -8,54 +8,41 @@ import App from './app.vue';
 import VueResource from 'vue-resource';
 import 'iview/dist/styles/iview.css';
 
-
-
 Vue.use(VueRouter);
 Vue.use(Vuex);
 
 Vue.use(iView);
 Vue.use(VueResource);
 
-
-
 // 路由配置
 const RouterConfig = {
-    mode: 'hash',
-    routes: Routers
+  mode: 'hash',
+  routes: Routers,
+  base: '/app'
 };
 const router = new VueRouter(RouterConfig);
 
 router.beforeEach((to, from, next) => {
-    iView.LoadingBar.start();
-    Util.title(to.meta.title);
-    next();
+  iView.LoadingBar.start();
+  Util.title(to.meta.title);
+  next();
 });
 
 router.afterEach(() => {
-    iView.LoadingBar.finish();
-    window.scrollTo(0, 0);
+  iView.LoadingBar.finish();
+  window.scrollTo(0, 0);
 });
-
 
 const store = new Vuex.Store({
-    state: {
-
-    },
-    getters: {
-
-    },
-    mutations: {
-
-    },
-    actions: {
-
-    }
+  state: {},
+  getters: {},
+  mutations: {},
+  actions: {}
 });
 
-
 new Vue({
-    el: '#app',
-    router: router,
-    store: store,
-    render: h => h(App)
+  el: '#app',
+  router: router,
+  store: store,
+  render: h => h(App)
 });

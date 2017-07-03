@@ -15,7 +15,7 @@
   .layout-content {
     min-height: 200px;
     overflow: hidden;
-    background: #eeeeee;
+    background: #f7f7f7;
     height: 100%;
   }
 
@@ -119,7 +119,7 @@
           <h1 style="display: inline;position: absolute;margin-left: 10px;">{{title}}</h1>
           <div v-if="showRectSet" style="float: right;margin: 5px;">
             <h3 style="display: inline;">最小选框尺寸(px)：</h3>
-            <Select v-model="minSize" size="small" style="width:100px;" @on-change="changeMinSize">
+            <Select v-model="minSize" size="small" style="width:50px;" @on-change="changeMinSize">
               <Option v-for="item in minList" :value="item.value" :key="item">{{ item.label }}</Option>
             </Select>
           </div>
@@ -224,6 +224,7 @@
 //            this.$router.replace('demarcate');
       this.$router.replace({name: 'demarcate', params: {type: 'd'}});
       this.title = "Demarcate";
+      this.showRectSet = true;
     }
   };
 </script>
