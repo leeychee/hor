@@ -1,789 +1,847 @@
 <style scoped>
-    .resize-drag {
-      color: red;
-      font-size: 20px;
-      font-family: sans-serif;
-      border-radius: 0px;
-      padding: 20px;
-      margin: 30px 20px;
-      border: dotted yellow 1px;
-      width: 120px;
-      /* This makes things *much* easier */
-      box-sizing: border-box;
-    }
+  .resize-drag {
+    color: red;
+    font-size: 20px;
+    font-family: sans-serif;
+    border-radius: 0px;
+    padding: 20px;
+    margin: 30px 20px;
+    border: dotted yellow 1px;
+    width: 120px;
+    /* This makes things *much* easier */
+    box-sizing: border-box;
+  }
 
-    .resize-container {
-      width: 100%;
-      height: 240px;
-    }
+  .resize-container {
+    width: 100%;
+    height: 240px;
+  }
 </style>
 <template>
-    <div id="main" style="height: 100%;">
-    </div>
+  <div id="main" style="height: 100%;">
+  </div>
 </template>
 <script>
-    import Konva from 'konva';
-    import Vue from 'vue'
-    import VueResource from 'vue-resource'
-    Vue.use(VueResource);
-    var stage,
-        layer,
-        drawCanvas,
-        context,
-        aspectRatio,//画布区域宽高比
-        zoomRatio, //图片缩放比
-        currentImageId,
-        imageObj,
-        imgStageWidth,
-        imgStageHeight,
-        currentGroup,
-        echoGroups,//图片中已标记框框
-        imageIds = [],//图片id数组
-        gIndex = -1,//游标
-        minRectSize = 60;
-    var demarcate =  {
-        name: 'demarcate',
-        data() {
-            return {
+  import Konva from 'konva';
+  import Vue from 'vue'
+  import VueResource from 'vue-resource'
+  Vue.use(VueResource);
+  var stage,
+      layer,
+      drawCanvas,
+      context,
+      aspectRatio,//画布区域宽高比
+      zoomRatio, //图片缩放比
+      currentImageId,
+      imageObj,
+      imgStageWidth,
+      imgStageHeight,
+      currentGroup,
+      echoGroups,//图片中已标记框框
+      imageIds = [],//图片id数组
+      gIndex = -1,//游标
+      minRectSize = 60;
+  var demarcate = {
+    name: 'demarcate',
+    data() {
+      return {
 //                stageWidth: 5/6*window.innerWidth,
 //                stageHeight: window.innerHeight - 60,
 //                aspectRatio : this.stageWidth/this.stageHeight,
-            };
-        },
-        props: ['minSize'],
-        created: function(){
-            console.log('type: ' + this.$route.params.type);
-        },
-        watch: {
-            minSize: function (val) {
-                minRectSize = val;
-            },
-            '$route.params.type': function(val){
-                console.log("route-type:",val);
-            },
-            '$route' (to, from) {
-              // 对路由变化作出响应...
-                console.log("to:",to,",from:",from);
+      };
+    },
+    props: ['minSize'],
+    created: function () {
+      console.log('type: ' + this.$route.params.type);
+    },
+    watch: {
+      minSize: function (val) {
+        minRectSize = val;
+      },
+      '$route.params.type': function (val) {
+        console.log("route-type:", val);
+      },
+      '$route' (to, from) {
+        // 对路由变化作出响应...
+        console.log("to:", to, ",from:", from);
+      }
+    },
+    mounted() {
+      this.stageCanvas();
+    },
+    beforeDestroy() {
+
+    },
+    methods: {
+      stageCanvas: function () {
+        stage = new Konva.Stage({
+          container: 'main',
+          width: 22 / 24 * window.innerWidth,
+          height: window.innerHeight - 40,
+        });
+        // add canvas element
+        layer = new Konva.Layer();
+        stage.add(layer);
+
+        imageObj = new Image();
+
+        var yoda = new Konva.Image({
+          x: 0,
+          y: 0,
+        });
+
+        var canvasImage = new Konva.Image({
+          x: 0,
+          y: 0
+        });
+        layer.add(yoda);
+        layer.add(canvasImage);
+
+        drawCanvas = document.createElement('canvas');
+        context = drawCanvas.getContext("2d");
+
+        stage.addEventListener("mousedown", mouseDown, false);
+        stage.addEventListener("mousemove", mouseXY, false);
+        stage.addEventListener("mouseup", mouseUp, false);
+
+        if (imageIds[gIndex + 1]) {
+          Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
+            let o = res.body;
+            echoGroups = o.objects;
+            currentImageId = o.id;
+            gIndex++;
+            imageObj.src = "/f/P_" + o.path;
+            console.log("/image/:id : ", res.body);
+          }, err => {
+            console.log("error /image/:id : ", err);
+          });
+        } else {
+          Vue.http.get('/images/_next').then(resp => {
+            console.log(resp.body);
+            let obj = resp.body;
+            echoGroups = null;
+            currentImageId = obj.id;
+            imageIds.push(currentImageId);
+            gIndex = imageIds.length - 1;
+            console.log(imageIds);
+            imageObj.src = "/f/P_" + obj.path;
+          }, error => {
+            if (error.ok == false) {
+              switch (error.status) {
+                case 404:
+                  alert("已经是最后一张图片了");
+                  break;
+              }
             }
-        },
-        mounted() {
-            this.stageCanvas();
-        },
-        beforeDestroy() {
-
-        },
-        methods: {
-            stageCanvas: function () {
-                stage = new Konva.Stage({
-                    container: 'main',
-                    width: 22/24*window.innerWidth,
-                    height: window.innerHeight - 40,
-                });
-                // add canvas element
-                layer = new Konva.Layer();
-                stage.add(layer);
-
-                imageObj = new Image();
-
-                var yoda = new Konva.Image({
-                    x: 0,
-                    y: 0,
-                });
-
-                var canvasImage = new Konva.Image({
-                    x: 0,
-                    y: 0
-                });
-                layer.add(yoda);
-                layer.add(canvasImage);
-
-                drawCanvas = document.createElement('canvas');
-                context = drawCanvas.getContext("2d");
-
-                stage.addEventListener("mousedown", mouseDown, false);
-                stage.addEventListener("mousemove", mouseXY, false);
-                stage.addEventListener("mouseup", mouseUp, false);
-
-                if(imageIds[gIndex + 1]) {
-                    Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
-                        let o = res.body;
-                        echoGroups = o.objects;
-                        currentImageId = o.id;
-                        gIndex++;
-                        imageObj.src = "/f/P_" + o.path;
-                        console.log("/image/:id : ", res.body);
-                    }, err => {
-                        console.log("error /image/:id : ", err);
-                    });
-                } else {
-                    Vue.http.get('/images/_next').then(resp => {
-                        console.log(resp.body);
-                        let obj = resp.body;
-                        echoGroups = null;
-                        currentImageId = obj.id;
-                        imageIds.push(currentImageId);
-                        gIndex = imageIds.length - 1;
-                        console.log(imageIds);
-                        imageObj.src = "/f/P_" + obj.path;
-                    }, error => {
-                        if (error.ok == false) {
-                            switch (error.status) {
-                                case 404:
-                                    alert("已经是最后一张图片了");
-                                break;
-                            }
-                        }
-                        console.log("image error: ", error);
-                    });
-                }
+            console.log("image error: ", error);
+          });
+        }
 //                imageObj.src = 'http://www.bz55.com/uploads/allimg/150306/139-1503061IR6.jpg';
-                imageObj.onload = function () {
-                    aspectRatio = stage.width()/stage.height();
-                    imgStageWidth = imageObj.width/imageObj.height >= aspectRatio ? stage.width() : imageObj.width/imageObj.height*stage.height();
-                    imgStageHeight = imageObj.width/imageObj.height >= aspectRatio ? imageObj.height/imageObj.width*stage.width() : stage.height();
-                    zoomRatio = imageObj.width/imgStageWidth;
+        imageObj.onload = function () {
+          aspectRatio = stage.width() / stage.height();
+          imgStageWidth = imageObj.width / imageObj.height >= aspectRatio ? stage.width() : imageObj.width / imageObj.height * stage.height();
+          imgStageHeight = imageObj.width / imageObj.height >= aspectRatio ? imageObj.height / imageObj.width * stage.width() : stage.height();
+          zoomRatio = imageObj.width / imgStageWidth;
 
-                    yoda.width(imgStageWidth);
-                    yoda.height(imgStageHeight);
-                    yoda.image(imageObj);
-                    drawCanvas.width = imgStageWidth;
-                    drawCanvas.height = imgStageHeight;
-                    canvasImage.image(drawCanvas);
+          yoda.width(imgStageWidth);
+          yoda.height(imgStageHeight);
+          yoda.image(imageObj);
+          drawCanvas.width = imgStageWidth;
+          drawCanvas.height = imgStageHeight;
+          canvasImage.image(drawCanvas);
 
-                    if (layer.get('Group').length > 0) {
-                        for(var i = layer.get('Group').length - 1; i >= 0; i--) {
-                            layer.get('Group')[i].destroy();
-                        }
-                        currentGroup = null;
-                        mouseIsInGroup = false;
-                        mouseIsOnCircle = false;
-                    }
-                    if (echoGroups) {
-                        for (var j = 0; j < echoGroups.length; j++) {
-                            var group = echoGroups[j];
-                            group.x = group.x / zoomRatio;
-                            group.y = group.y / zoomRatio;
-                            group.w = group.w / zoomRatio;
-                            group.h = group.h / zoomRatio;
-                            console.log("each group:", group);
-                            var rect = new Konva.Rect({
-                                width: group.w,
-                                height: group.h,
-                                stroke: 'red',
-                                strokeWidth: 1
-                            });
-                            rect.on('mouseover', function () {
-                                document.body.style.cursor = 'default';
-                            });
-                            rect.on('mouseout', function () {
-                                document.body.style.cursor = 'default';
-                            });
+          if (layer.get('Group').length > 0) {
+            for (var i = layer.get('Group').length - 1; i >= 0; i--) {
+              layer.get('Group')[i].destroy();
+            }
+            currentGroup = null;
+            mouseIsInGroup = false;
+            mouseIsOnCircle = false;
+          }
+          if (echoGroups) {
+            for (var j = 0; j < echoGroups.length; j++) {
+              var group = echoGroups[j];
+              group.x = group.x / zoomRatio;
+              group.y = group.y / zoomRatio;
+              group.w = group.w / zoomRatio;
+              group.h = group.h / zoomRatio;
+              console.log("each group:", group);
+              var rect = new Konva.Rect({
+                width: group.w,
+                height: group.h,
+                stroke: 'red',
+                strokeWidth: 1
+              });
+              rect.on('mouseover', function () {
+                document.body.style.cursor = 'default';
+              });
+              rect.on('mouseout', function () {
+                document.body.style.cursor = 'default';
+              });
 
-                            var minX = drawCanvas.getBoundingClientRect().left;
-                            var maxX = drawCanvas.getBoundingClientRect().left + imgStageWidth - rect.width();
-                            var minY = drawCanvas.getBoundingClientRect().top;
-                            var maxY = drawCanvas.getBoundingClientRect().top + imgStageHeight - rect.height();
-                            var rectGroup = new Konva.Group({
-                                x: group.x,
-                                y: group.y,
-                                draggable: false,
-                                dragBoundFunc: function (pos) {
-                                    var X=pos.x;
-                                    var Y=pos.y;
-                                    if(X<minX){X=minX;}
-                                    if(X>maxX){X=maxX;}
-                                    if(Y<minY){Y=minY;}
-                                    if(Y>maxY){Y=maxY;}
-                                    return({x:X, y:Y});
-                                }
-                            });
-                            rectGroup.on('dragmove', function () {
+              var minX = drawCanvas.getBoundingClientRect().left;
+              var maxX = drawCanvas.getBoundingClientRect().left + imgStageWidth - rect.width();
+              var minY = drawCanvas.getBoundingClientRect().top;
+              var maxY = drawCanvas.getBoundingClientRect().top + imgStageHeight - rect.height();
+              var rectGroup = new Konva.Group({
+                x: group.x,
+                y: group.y,
+                draggable: false,
+                dragBoundFunc: function (pos) {
+                  var X = pos.x;
+                  var Y = pos.y;
+                  if (X < minX) {
+                    X = minX;
+                  }
+                  if (X > maxX) {
+                    X = maxX;
+                  }
+                  if (Y < minY) {
+                    Y = minY;
+                  }
+                  if (Y > maxY) {
+                    Y = maxY;
+                  }
+                  return ({x: X, y: Y});
+                }
+              });
+              rectGroup.on('dragmove', function () {
                 //                console.log("x:" + this.getX(), "y:" + this.getY());
-                                console.log("originX:", Math.round(this.getX()*zoomRatio), "originY:", Math.round(this.getY()*zoomRatio));
-                            });
-                            rectGroup.on('mouseover', function () {
-                                mouseIsInGroup = true;
-                            });
-                            rectGroup.on('mouseout', function () {
-                                mouseIsInGroup = false;
-                            });
-                            rectGroup.on('mousedown', function (e) {
-                                if(e.evt.button == 2){
-                                    if (currentGroup == this){
-                                        currentGroup = null;
-                                        this.destroy();
-                                        layer.draw();
-                                        mouseIsInGroup = false;
-                                        mouseIsOnCircle = false;
-                                    }
-                                }
-                            });
-                            rect.on("click", function (e) {
-                                if(e.evt.button == 0){
-                                    var w1 = startX <= endX ? endX - startX : startX - endX;
-                                    var h1 = startY <= endY ? endY - startY : startY - endY;
-                                    if(w1 < minRectSize && h1 < minRectSize) {
-                                        for (var i = 0; i < layer.get('Group').length; i++) {
-                                            layer.get('Group')[i].get('Rect')[0].setStroke('red');
-                                        }
-                                        this.stroke('yellow');
-                                        layer.draw();
-                                        currentGroup = this.getParent();
-                                    }
-                                }
-                            });
-                            rectGroup.add(rect);
-                            layer.add(rectGroup);
-                            addAnchor(rectGroup, 0, 0, 'topLeft');
-                            addAnchor(rectGroup, group.w, 0, 'topRight');
-                            addAnchor(rectGroup, 0, group.h, 'bottomLeft');
-                            addAnchor(rectGroup, group.w, group.h, 'bottomRight');
-                            context.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-                            layer.draw();
-                        }
-                    }
+                console.log("originX:", Math.round(this.getX() * zoomRatio), "originY:", Math.round(this.getY() * zoomRatio));
+              });
+              rectGroup.on('mouseover', function () {
+                mouseIsInGroup = true;
+              });
+              rectGroup.on('mouseout', function () {
+                mouseIsInGroup = false;
+              });
+              rectGroup.on('mousedown', function (e) {
+                if (e.evt.button == 2) {
+                  if (currentGroup == this) {
+                    currentGroup = null;
+                    this.destroy();
                     layer.draw();
-                };
-            }
-        }
-    };
-    var startX, endX, startY, endY;
-    var mouseIsDown, mouseIsInGroup, mouseIsOnCircle;
-
-    function mouseDown(eve) {
-        if (!mouseIsOnCircle) {
-            mouseIsDown = true;
-            var pos = getMousePos(drawCanvas, eve);
-            startX = endX = pos.x;
-            startY = endY = pos.y;
-            drawSquare(); //update
-        }
-    }
-
-    function mouseXY(eve) {
-        if (mouseIsDown && !mouseIsOnCircle ) {
-            var pos = getMousePos(drawCanvas, eve);
-            endX = pos.x;
-            endY = pos.y;
-            drawSquare();
-        }
-    }
-
-    function mouseUp(eve) {
-        var pos = getMousePos(drawCanvas, eve);
-        endX = pos.x;
-        endY = pos.y;
-        var w = startX <= endX ? endX - startX : startX - endX;
-        var h = startY <= endY ? endY - startY : startY - endY;
-        if (mouseIsDown && !mouseIsOnCircle) {
-            mouseIsDown = false;
-            drawSquare(); //update on mouse-up
-
-            if (w >= minRectSize || h >= minRectSize) {
-                var rect = new Konva.Rect({
-                    width: w,
-                    height: h,
-                    stroke: 'red',
-                    strokeWidth: 1
-                });
-                rect.on('mouseover', function () {
-                    document.body.style.cursor = 'default';
-                });
-                rect.on('mouseout', function () {
-                    document.body.style.cursor = 'default';
-                });
-
-                var minX = drawCanvas.getBoundingClientRect().left;
-                var maxX = drawCanvas.getBoundingClientRect().left + imgStageWidth - rect.width();
-                var minY = drawCanvas.getBoundingClientRect().top;
-                var maxY = drawCanvas.getBoundingClientRect().top + imgStageHeight - rect.height();
-                var rectGroup = new Konva.Group({
-                    x: startX <= endX ? startX : endX,
-                    y: startY <= endY ? startY : endY,
-                    draggable: false,
-                    dragBoundFunc: function (pos) {
-                        var X=pos.x;
-                        var Y=pos.y;
-                        if(X<minX){X=minX;}
-                        if(X>maxX){X=maxX;}
-                        if(Y<minY){Y=minY;}
-                        if(Y>maxY){Y=maxY;}
-                        return({x:X, y:Y});
-                    }
-                });
-                rectGroup.on('dragmove', function () {
-    //                console.log("x:" + this.getX(), "y:" + this.getY());
-                    console.log("originX:", Math.round(this.getX()*zoomRatio), "originY:", Math.round(this.getY()*zoomRatio));
-                });
-                rectGroup.on('mouseover', function () {
-                    mouseIsInGroup = true;
-                });
-                rectGroup.on('mouseout', function () {
                     mouseIsInGroup = false;
-                });
-                rectGroup.on('mousedown', function (e) {
-                    if(e.evt.button == 2){
-                        if (currentGroup == this){
-                            currentGroup = null;
-                            this.destroy();
-                            layer.draw();
-                            mouseIsInGroup = false;
-                            mouseIsOnCircle = false;
-                        }
+                    mouseIsOnCircle = false;
+                  }
+                }
+              });
+              rect.on("click", function (e) {
+                if (e.evt.button == 0) {
+                  var w1 = startX <= endX ? endX - startX : startX - endX;
+                  var h1 = startY <= endY ? endY - startY : startY - endY;
+                  if (w1 < minRectSize && h1 < minRectSize) {
+                    for (var i = 0; i < layer.get('Group').length; i++) {
+                      layer.get('Group')[i].get('Rect')[0].setStroke('red');
                     }
-                });
-                rect.on("click", function (e) {
-                    if(e.evt.button == 0){
-                        var w1 = startX <= endX ? endX - startX : startX - endX;
-                        var h1 = startY <= endY ? endY - startY : startY - endY;
-                        if(w1 < minRectSize && h1 < minRectSize) {
-                            for(var i = 0; i < layer.get('Group').length; i++) {
-                                layer.get('Group')[i].get('Rect')[0].setStroke('red');
-                            }
-                            this.stroke('yellow');
-                            layer.draw();
-                            currentGroup = this.getParent();
-                        }
-                    }
-                });
-                rectGroup.add(rect);
-                layer.add(rectGroup);
-                addAnchor(rectGroup, 0, 0, 'topLeft');
-                addAnchor(rectGroup, w, 0, 'topRight');
-                addAnchor(rectGroup, 0, h, 'bottomLeft');
-                addAnchor(rectGroup, w, h, 'bottomRight');
+                    this.stroke('yellow');
+                    layer.draw();
+                    currentGroup = this.getParent();
+                  }
+                }
+              });
+              rectGroup.add(rect);
+              layer.add(rectGroup);
+              addAnchor(rectGroup, 0, 0, 'topLeft');
+              addAnchor(rectGroup, group.w, 0, 'topRight');
+              addAnchor(rectGroup, 0, group.h, 'bottomLeft');
+              addAnchor(rectGroup, group.w, group.h, 'bottomRight');
+              context.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+              layer.draw();
             }
-
-            context.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-            layer.draw();
-        }
-    }
-
-    function drawSquare() {
-        // creating a square
-        var w = endX - startX;
-        var h = endY - startY;
-        var offsetX = (w < 0) ? w : 0;
-        var offsetY = (h < 0) ? h : 0;
-        var width = Math.abs(w);
-        var height = Math.abs(h);
-
-        context.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-
-        context.beginPath();
-        context.rect(startX + offsetX, startY + offsetY, width, height);
-        context.lineWidth = 1;
-        context.strokeStyle = 'red';
-//        context.setLineDash([5,5]);
-        context.stroke();
-        layer.draw();
-    }
-
-    function getMousePos(canvas, evt) {
-        var rect = canvas.getBoundingClientRect();
-        return {
-            x: evt.layerX - rect.left,
-            y: evt.layerY - rect.top
+          }
+          layer.draw();
         };
+      }
     }
+  };
+  var startX, endX, startY, endY;
+  var mouseIsDown, mouseIsInGroup, mouseIsOnCircle;
 
-    function update(activeAnchor) {
-        var group = activeAnchor.getParent();
-        var topLeft = group.get('.topLeft')[0];
-        var topRight = group.get('.topRight')[0];
-        var bottomRight = group.get('.bottomRight')[0];
-        var bottomLeft = group.get('.bottomLeft')[0];
-        var rect = group.get('Rect')[0];
-        var anchorX = activeAnchor.getX();
-        var anchorY = activeAnchor.getY();
-        var tmp;
+  function mouseDown(eve) {
+    if (!mouseIsOnCircle) {
+      mouseIsDown = true;
+      var pos = getMousePos(drawCanvas, eve);
+      startX = endX = pos.x;
+      startY = endY = pos.y;
+      drawSquare(); //update
+    }
+  }
 
-//        console.log("anchorX:"+anchorX,"anchorY:"+anchorY);
-        switch (activeAnchor.getName()) {
-            case 'topLeft':
-                group.setX(group.getX() + anchorX);
-                group.setY(group.getY() + anchorY);
-                topLeft.position({x:0, y:0});
-                topRight.position({x:topRight.getX() - anchorX, y:0});
-                bottomLeft.position({x:0, y:bottomLeft.getY() - anchorY});
-                bottomRight.position({x:bottomRight.getX() - anchorX, y:bottomRight.getY() - anchorY});
-                break;
-            case 'topRight':
-                group.setY(group.getY() + anchorY);
-                topLeft.position({x:0, y:0});
-                topRight.position({x:anchorX, y:0});
-                bottomLeft.position({x:0, y:bottomLeft.getY()-anchorY});
-                bottomRight.position({x:anchorX, y:bottomRight.getY()-anchorY});
-                break;
-            case 'bottomLeft':
-                group.setX(group.getX() + anchorX);
-                topLeft.position({x:0, y:0});
-                topRight.position({x:topRight.getX() - anchorX, y:0});
-                bottomLeft.position({x:0, y:anchorY});
-                bottomRight.position({x:bottomRight.getX() - anchorX, y:anchorY});
-                break;
-            case 'bottomRight':
-                topLeft.position({x:0, y:0});
-                topRight.position({x:anchorX, y:0});
-                bottomLeft.position({x:0, y:anchorY});
-                bottomRight.position({x:anchorX, y:anchorY});
-                break;
-        }
+  function mouseXY(eve) {
+    if (mouseIsDown && !mouseIsOnCircle) {
+      var pos = getMousePos(drawCanvas, eve);
+      endX = pos.x;
+      endY = pos.y;
+      drawSquare();
+    }
+  }
 
+  function mouseUp(eve) {
+    var pos = getMousePos(drawCanvas, eve);
+    endX = pos.x;
+    endY = pos.y;
+    var w = startX <= endX ? endX - startX : startX - endX;
+    var h = startY <= endY ? endY - startY : startY - endY;
+    if (mouseIsDown && !mouseIsOnCircle) {
+      mouseIsDown = false;
+      drawSquare(); //update on mouse-up
 
-        rect.position(topLeft.position());
-        var width = topRight.getX() - topLeft.getX();
-        var height = bottomLeft.getY() - topLeft.getY();
-//        console.log("topLeft.getX():"+topLeft.getX(),"topLeft.getY():"+topLeft.getY());
-//        console.log("topRight.getX():"+topRight.getX(),"topRight.getY():"+topRight.getY());
-//        console.log("bottomLeft.getX():"+bottomLeft.getX(),"bottomLeft.getY():"+bottomLeft.getY());
-//        console.log("bottomRight.getX():"+bottomRight.getX(),"bottomRight.getY():"+bottomRight.getY());
-        console.log("width:" + width, "height:" + height);
-        console.log("originWidth:", Math.round(width*zoomRatio), "originHeight:", Math.round(height*zoomRatio));
-        rect.width(width);
-        rect.height(height);
+      if (w >= minRectSize || h >= minRectSize) {
+        var rect = new Konva.Rect({
+          width: w,
+          height: h,
+          stroke: 'red',
+          strokeWidth: 1
+        });
+        rect.on('mouseover', function () {
+          document.body.style.cursor = 'default';
+        });
+        rect.on('mouseout', function () {
+          document.body.style.cursor = 'default';
+        });
+
         var minX = drawCanvas.getBoundingClientRect().left;
         var maxX = drawCanvas.getBoundingClientRect().left + imgStageWidth - rect.width();
         var minY = drawCanvas.getBoundingClientRect().top;
         var maxY = drawCanvas.getBoundingClientRect().top + imgStageHeight - rect.height();
-        group.dragBoundFunc(function (pos) {
-            var X=pos.x;
-            var Y=pos.y;
-            if(X<minX){X=minX;}
-            if(X>maxX){X=maxX;}
-            if(Y<minY){Y=minY;}
-            if(Y>maxY){Y=maxY;}
-            return({x:X, y:Y});
+        var rectGroup = new Konva.Group({
+          x: startX <= endX ? startX : endX,
+          y: startY <= endY ? startY : endY,
+          draggable: false,
+          dragBoundFunc: function (pos) {
+            var X = pos.x;
+            var Y = pos.y;
+            if (X < minX) {
+              X = minX;
+            }
+            if (X > maxX) {
+              X = maxX;
+            }
+            if (Y < minY) {
+              Y = minY;
+            }
+            if (Y > maxY) {
+              Y = maxY;
+            }
+            return ({x: X, y: Y});
+          }
         });
+        rectGroup.on('dragmove', function () {
+          //                console.log("x:" + this.getX(), "y:" + this.getY());
+          console.log("originX:", Math.round(this.getX() * zoomRatio), "originY:", Math.round(this.getY() * zoomRatio));
+        });
+        rectGroup.on('mouseover', function () {
+          mouseIsInGroup = true;
+        });
+        rectGroup.on('mouseout', function () {
+          mouseIsInGroup = false;
+        });
+        rectGroup.on('mousedown', function (e) {
+          if (e.evt.button == 2) {
+            if (currentGroup == this) {
+              currentGroup = null;
+              this.destroy();
+              layer.draw();
+              mouseIsInGroup = false;
+              mouseIsOnCircle = false;
+            }
+          }
+        });
+        rect.on("click", function (e) {
+          if (e.evt.button == 0) {
+            var w1 = startX <= endX ? endX - startX : startX - endX;
+            var h1 = startY <= endY ? endY - startY : startY - endY;
+            if (w1 < minRectSize && h1 < minRectSize) {
+              for (var i = 0; i < layer.get('Group').length; i++) {
+                layer.get('Group')[i].get('Rect')[0].setStroke('red');
+              }
+              this.stroke('yellow');
+              layer.draw();
+              currentGroup = this.getParent();
+            }
+          }
+        });
+        rectGroup.add(rect);
+        layer.add(rectGroup);
+        addAnchor(rectGroup, 0, 0, 'topLeft');
+        addAnchor(rectGroup, w, 0, 'topRight');
+        addAnchor(rectGroup, 0, h, 'bottomLeft');
+        addAnchor(rectGroup, w, h, 'bottomRight');
+      }
+
+      context.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+      layer.draw();
     }
-    function addAnchor(group, x, y, name) {
-        var stage = group.getStage();
-        var layer = group.getLayer();
-        var minX = drawCanvas.getBoundingClientRect().left;
-        var maxX = drawCanvas.getBoundingClientRect().right + imgStageWidth;
-        var minY = drawCanvas.getBoundingClientRect().top;
-        var maxY = drawCanvas.getBoundingClientRect().top + imgStageHeight;
-        var anchor = new Konva.Circle({
-            x: x,
-            y: y,
-            stroke: '#666',
-            fill: '#ddd',
-            strokeWidth: 1,
-            radius: 4,
-            name: name,
-            draggable: true,
-            dragOnTop: false,
-            dragBoundFunc: function (pos) {
-                var X = pos.x;
-                var Y = pos.y;
-                var p = this.getParent();
-                var r = p.get('Rect')[0];
+  }
+
+  function drawSquare() {
+    // creating a square
+    var w = endX - startX;
+    var h = endY - startY;
+    var offsetX = (w < 0) ? w : 0;
+    var offsetY = (h < 0) ? h : 0;
+    var width = Math.abs(w);
+    var height = Math.abs(h);
+
+    context.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+
+    context.beginPath();
+    context.rect(startX + offsetX, startY + offsetY, width, height);
+    context.lineWidth = 1;
+    context.strokeStyle = 'red';
+//        context.setLineDash([5,5]);
+    context.stroke();
+    layer.draw();
+  }
+
+  function getMousePos(canvas, evt) {
+    var rect = canvas.getBoundingClientRect();
+    return {
+      x: evt.layerX - rect.left,
+      y: evt.layerY - rect.top
+    };
+  }
+
+  function update(activeAnchor) {
+    var group = activeAnchor.getParent();
+    var topLeft = group.get('.topLeft')[0];
+    var topRight = group.get('.topRight')[0];
+    var bottomRight = group.get('.bottomRight')[0];
+    var bottomLeft = group.get('.bottomLeft')[0];
+    var rect = group.get('Rect')[0];
+    var anchorX = activeAnchor.getX();
+    var anchorY = activeAnchor.getY();
+    var tmp;
+
+//        console.log("anchorX:"+anchorX,"anchorY:"+anchorY);
+    switch (activeAnchor.getName()) {
+      case 'topLeft':
+        group.setX(group.getX() + anchorX);
+        group.setY(group.getY() + anchorY);
+        topLeft.position({x: 0, y: 0});
+        topRight.position({x: topRight.getX() - anchorX, y: 0});
+        bottomLeft.position({x: 0, y: bottomLeft.getY() - anchorY});
+        bottomRight.position({x: bottomRight.getX() - anchorX, y: bottomRight.getY() - anchorY});
+        break;
+      case 'topRight':
+        group.setY(group.getY() + anchorY);
+        topLeft.position({x: 0, y: 0});
+        topRight.position({x: anchorX, y: 0});
+        bottomLeft.position({x: 0, y: bottomLeft.getY() - anchorY});
+        bottomRight.position({x: anchorX, y: bottomRight.getY() - anchorY});
+        break;
+      case 'bottomLeft':
+        group.setX(group.getX() + anchorX);
+        topLeft.position({x: 0, y: 0});
+        topRight.position({x: topRight.getX() - anchorX, y: 0});
+        bottomLeft.position({x: 0, y: anchorY});
+        bottomRight.position({x: bottomRight.getX() - anchorX, y: anchorY});
+        break;
+      case 'bottomRight':
+        topLeft.position({x: 0, y: 0});
+        topRight.position({x: anchorX, y: 0});
+        bottomLeft.position({x: 0, y: anchorY});
+        bottomRight.position({x: anchorX, y: anchorY});
+        break;
+    }
+
+
+    rect.position(topLeft.position());
+    var width = topRight.getX() - topLeft.getX();
+    var height = bottomLeft.getY() - topLeft.getY();
+//        console.log("topLeft.getX():"+topLeft.getX(),"topLeft.getY():"+topLeft.getY());
+//        console.log("topRight.getX():"+topRight.getX(),"topRight.getY():"+topRight.getY());
+//        console.log("bottomLeft.getX():"+bottomLeft.getX(),"bottomLeft.getY():"+bottomLeft.getY());
+//        console.log("bottomRight.getX():"+bottomRight.getX(),"bottomRight.getY():"+bottomRight.getY());
+    console.log("width:" + width, "height:" + height);
+    console.log("originWidth:", Math.round(width * zoomRatio), "originHeight:", Math.round(height * zoomRatio));
+    rect.width(width);
+    rect.height(height);
+    var minX = drawCanvas.getBoundingClientRect().left;
+    var maxX = drawCanvas.getBoundingClientRect().left + imgStageWidth - rect.width();
+    var minY = drawCanvas.getBoundingClientRect().top;
+    var maxY = drawCanvas.getBoundingClientRect().top + imgStageHeight - rect.height();
+    group.dragBoundFunc(function (pos) {
+      var X = pos.x;
+      var Y = pos.y;
+      if (X < minX) {
+        X = minX;
+      }
+      if (X > maxX) {
+        X = maxX;
+      }
+      if (Y < minY) {
+        Y = minY;
+      }
+      if (Y > maxY) {
+        Y = maxY;
+      }
+      return ({x: X, y: Y});
+    });
+  }
+  function addAnchor(group, x, y, name) {
+    var stage = group.getStage();
+    var layer = group.getLayer();
+    var minX = drawCanvas.getBoundingClientRect().left;
+    var maxX = drawCanvas.getBoundingClientRect().right + imgStageWidth;
+    var minY = drawCanvas.getBoundingClientRect().top;
+    var maxY = drawCanvas.getBoundingClientRect().top + imgStageHeight;
+    var anchor = new Konva.Circle({
+      x: x,
+      y: y,
+      stroke: '#666',
+      fill: '#ddd',
+      strokeWidth: 1,
+      radius: 4,
+      name: name,
+      draggable: true,
+      dragOnTop: false,
+      dragBoundFunc: function (pos) {
+        var X = pos.x;
+        var Y = pos.y;
+        var p = this.getParent();
+        var r = p.get('Rect')[0];
 //                console.log("r:",r.width(),r.height());
-                switch (this.getName()) {
-                    case 'topLeft':
-                        if(X<minX){X=minX;}
-                        if(X>p.getX()+r.width()){X=p.getX()+r.width();}
-                        if(Y<minY){Y=minY;}
-                        if(Y>p.getY()+r.height()){Y=p.getY()+r.height();}
-                        break;
-                    case 'topRight':
-                        if(X<p.getX()){X=p.getX();}
-                        if(X>maxX){X=maxX;}
-                        if(Y<minY){Y=minY;}
-                        if(Y>p.getY()+r.height()){Y=p.getY()+r.height();}
-                        break;
-                    case 'bottomLeft':
-                        if(X<minX){X=minX;}
-                        if(X>p.getX()+r.width()){X=p.getX()+r.width();}
-                        if(Y<p.getY()){Y=p.getY();}
-                        if(Y>maxY){Y=maxY;}
-                        break;
-                    case 'bottomRight':
-                        if(X<p.getX()){X=p.getX();}
-                        if(X>maxX){X=maxX;}
-                        if(Y<p.getY()){Y=p.getY();}
-                        if(Y>maxY){Y=maxY;}
-                        break;
-                }
-                return({x:X, y:Y});
+        switch (this.getName()) {
+          case 'topLeft':
+            if (X < minX) {
+              X = minX;
             }
-        });
-        anchor.on('dragmove', function () {
-            update(this);
-            layer.draw();
-        });
-        anchor.on('mousedown touchstart', function () {
+            if (X > p.getX() + r.width()) {
+              X = p.getX() + r.width();
+            }
+            if (Y < minY) {
+              Y = minY;
+            }
+            if (Y > p.getY() + r.height()) {
+              Y = p.getY() + r.height();
+            }
+            break;
+          case 'topRight':
+            if (X < p.getX()) {
+              X = p.getX();
+            }
+            if (X > maxX) {
+              X = maxX;
+            }
+            if (Y < minY) {
+              Y = minY;
+            }
+            if (Y > p.getY() + r.height()) {
+              Y = p.getY() + r.height();
+            }
+            break;
+          case 'bottomLeft':
+            if (X < minX) {
+              X = minX;
+            }
+            if (X > p.getX() + r.width()) {
+              X = p.getX() + r.width();
+            }
+            if (Y < p.getY()) {
+              Y = p.getY();
+            }
+            if (Y > maxY) {
+              Y = maxY;
+            }
+            break;
+          case 'bottomRight':
+            if (X < p.getX()) {
+              X = p.getX();
+            }
+            if (X > maxX) {
+              X = maxX;
+            }
+            if (Y < p.getY()) {
+              Y = p.getY();
+            }
+            if (Y > maxY) {
+              Y = maxY;
+            }
+            break;
+        }
+        return ({x: X, y: Y});
+      }
+    });
+    anchor.on('dragmove', function () {
+      update(this);
+      layer.draw();
+    });
+    anchor.on('mousedown touchstart', function () {
 //            group.setDraggable(false);
-            this.moveToTop();
-        });
-        anchor.on('dragend', function () {
+      this.moveToTop();
+    });
+    anchor.on('dragend', function () {
 //            group.setDraggable(true);
+      layer.draw();
+    });
+    // add hover styling
+    anchor.on('mouseover', function () {
+      switch (this.getName()) {
+        case 'topLeft':
+          document.body.style.cursor = 'crosshair';
+          break;
+        case 'topRight':
+          document.body.style.cursor = 'crosshair';
+          break;
+        case 'bottomLeft':
+          document.body.style.cursor = 'crosshair';
+          break;
+        case 'bottomRight':
+          document.body.style.cursor = 'crosshair';
+          break;
+      }
+      this.strokeWidth(2);
+      mouseIsOnCircle = true;
+      layer.draw();
+    });
+    anchor.on('mouseout', function () {
+      document.body.style.cursor = 'default';
+      this.strokeWidth(1);
+      mouseIsOnCircle = false;
+      layer.draw();
+    });
+    group.add(anchor);
+  }
+  window.addEventListener('keydown', check, true);
+  document.oncontextmenu = function () {
+    return false;
+  };
+  function check(e) {
+    var key = event.which || event.keyCode;
+    if (currentGroup) {
+      var rect = currentGroup.get('Rect')[0];
+      var rectRatio = rect.width() / rect.height();
+      var wOffset = rectRatio > 1 ? rectRatio : 1;
+      var hOffset = rectRatio > 1 ? 1 : 1 / rectRatio;
+      console.log("wOffset:", wOffset, " hOffset:", hOffset);
+      var topLeft = currentGroup.get('.topLeft')[0];
+      var topRight = currentGroup.get('.topRight')[0];
+      var bottomRight = currentGroup.get('.bottomRight')[0];
+      var bottomLeft = currentGroup.get('.bottomLeft')[0];
+      var minX = drawCanvas.getBoundingClientRect().left;
+      var maxX = drawCanvas.getBoundingClientRect().left + imgStageWidth - rect.width();
+      var minY = drawCanvas.getBoundingClientRect().top;
+      var maxY = drawCanvas.getBoundingClientRect().top + imgStageHeight - rect.height();
+      switch (key) {
+        case 37://←
+          if ((minX + 1) <= currentGroup.getX())
+            currentGroup.setX(currentGroup.getX() - 1);
+          break;
+        case 38://↑
+          if ((minY + 1) <= currentGroup.getY())
+            currentGroup.setY(currentGroup.getY() - 1);
+          break;
+        case 39://→
+          if (currentGroup.getX() <= (maxX - 1))
+            currentGroup.setX(currentGroup.getX() + 1);
+          break;
+        case 40://↓
+          if (currentGroup.getY() <= (maxY - 1))
+            currentGroup.setY(currentGroup.getY() + 1);
+          break;
+        case 87://w
+          if ((minX + 1) <= currentGroup.getX()) {
+            topLeft.setX(topLeft.getX() - 1);
+            bottomLeft.setX(bottomLeft.getX() - 1);
+            update(topLeft);
             layer.draw();
-        });
-        // add hover styling
-        anchor.on('mouseover', function () {
-            switch (this.getName()) {
-                case 'topLeft':
-                    document.body.style.cursor = 'crosshair';
-                    break;
-                case 'topRight':
-                    document.body.style.cursor = 'crosshair';
-                    break;
-                case 'bottomLeft':
-                    document.body.style.cursor = 'crosshair';
-                    break;
-                case 'bottomRight':
-                    document.body.style.cursor = 'crosshair';
-                    break;
-            }
-            this.strokeWidth(2);
-            mouseIsOnCircle = true;
+          }
+          if ((minY + 1) <= currentGroup.getY()) {
+            topLeft.setY(topLeft.getY() - 1);
+            topRight.setY(topRight.getY() - 1);
+            update(topLeft);
             layer.draw();
-        });
-        anchor.on('mouseout', function () {
-            document.body.style.cursor = 'default';
-            this.strokeWidth(1);
-            mouseIsOnCircle = false;
+          }
+          if (currentGroup.getX() <= (maxX - 1)) {
+            topRight.setX(topRight.getX() + 1);
+            bottomRight.setX(bottomRight.getX() + 1);
+            update(topLeft);
             layer.draw();
-        });
-        group.add(anchor);
+          }
+          if (currentGroup.getY() <= (maxY - 1)) {
+            bottomLeft.setY(bottomLeft.getY() + 1);
+            bottomRight.setY(bottomRight.getY() + 1);
+            update(topLeft);
+            layer.draw();
+          }
+          break;
+        case 83://s
+          if (topLeft.getX() + wOffset * 2 <= topRight.getX()) {
+            topLeft.setX(topLeft.getX() + wOffset);
+            topRight.setX(topRight.getX() - wOffset);
+            bottomLeft.setX(bottomLeft.getX() + wOffset);
+            bottomRight.setX(bottomRight.getX() - wOffset);
+            update(topLeft);
+            update(topRight);
+            update(bottomLeft);
+            update(bottomRight);
+            layer.draw();
+          }
+          if (topLeft.getY() + hOffset * 2 <= bottomLeft.getY()) {
+            topLeft.setY(topLeft.getY() + hOffset);
+            topRight.setY(topRight.getY() + hOffset);
+            bottomLeft.setY(bottomLeft.getY() - hOffset);
+            bottomRight.setY(bottomRight.getY() - hOffset);
+            update(topLeft);
+            update(topRight);
+            update(bottomLeft);
+            update(bottomRight);
+            layer.draw();
+          }
+          break;
+        case 88://x
+          currentGroup.destroy();
+          currentGroup = null;
+          layer.draw();
+          mouseIsInGroup = false;
+          mouseIsOnCircle = false;
+          break;
+      }
+      if (currentGroup) {
+        console.log("originX:", Math.round(currentGroup.getX() * zoomRatio), "originY:", Math.round(currentGroup.getY() * zoomRatio));
+      }
+      layer.draw();
     }
-    window.addEventListener('keydown',check,true);
-    document.oncontextmenu = function(){return false;};
-    function check(e) {
-        var key = event.which || event.keyCode;
-        if (currentGroup) {
-            var rect = currentGroup.get('Rect')[0];
-            var rectRatio = rect.width()/rect.height();
-            var wOffset = rectRatio > 1 ? rectRatio : 1;
-            var hOffset = rectRatio > 1 ? 1 : 1/rectRatio;
-            console.log("wOffset:",wOffset," hOffset:",hOffset);
-            var topLeft = currentGroup.get('.topLeft')[0];
-            var topRight = currentGroup.get('.topRight')[0];
-            var bottomRight = currentGroup.get('.bottomRight')[0];
-            var bottomLeft = currentGroup.get('.bottomLeft')[0];
-            var minX = drawCanvas.getBoundingClientRect().left;
-            var maxX = drawCanvas.getBoundingClientRect().left + imgStageWidth - rect.width();
-            var minY = drawCanvas.getBoundingClientRect().top;
-            var maxY = drawCanvas.getBoundingClientRect().top + imgStageHeight - rect.height();
-            switch (key) {
-                case 37://←
-                    if ((minX + 1) <= currentGroup.getX())
-                        currentGroup.setX(currentGroup.getX() - 1);
-                    break;
-                case 38://↑
-                    if ((minY + 1) <= currentGroup.getY())
-                        currentGroup.setY(currentGroup.getY() - 1);
-                    break;
-                case 39://→
-                    if (currentGroup.getX() <= (maxX - 1))
-                        currentGroup.setX(currentGroup.getX() + 1);
-                    break;
-                case 40://↓
-                    if (currentGroup.getY() <= (maxY - 1))
-                        currentGroup.setY(currentGroup.getY() + 1);
-                    break;
-                case 87://w
-                    if ((minX + 1) <= currentGroup.getX()) {
-                        topLeft.setX(topLeft.getX() - 1);
-                        bottomLeft.setX(bottomLeft.getX() - 1);
-                        update(topLeft);
-                        layer.draw();
-                    }
-                    if ((minY + 1) <= currentGroup.getY()) {
-                        topLeft.setY(topLeft.getY() - 1);
-                        topRight.setY(topRight.getY()  -1);
-                        update(topLeft);
-                        layer.draw();
-                    }
-                    if (currentGroup.getX() <= (maxX - 1)) {
-                        topRight.setX(topRight.getX() + 1);
-                        bottomRight.setX(bottomRight.getX() + 1);
-                        update(topLeft);
-                        layer.draw();
-                    }
-                    if (currentGroup.getY() <= (maxY - 1)) {
-                        bottomLeft.setY(bottomLeft.getY() + 1);
-                        bottomRight.setY(bottomRight.getY() + 1);
-                        update(topLeft);
-                        layer.draw();
-                    }
-                    break;
-                case 83://s
-                    if (topLeft.getX() + wOffset * 2 <= topRight.getX()) {
-                        topLeft.setX(topLeft.getX() + wOffset);
-                        topRight.setX(topRight.getX() - wOffset);
-                        bottomLeft.setX(bottomLeft.getX() + wOffset);
-                        bottomRight.setX(bottomRight.getX() - wOffset);
-                        update(topLeft);
-                        update(topRight);
-                        update(bottomLeft);
-                        update(bottomRight);
-                        layer.draw();
-                    }
-                    if (topLeft.getY() + hOffset * 2 <= bottomLeft.getY()) {
-                        topLeft.setY(topLeft.getY() + hOffset);
-                        topRight.setY(topRight.getY() + hOffset);
-                        bottomLeft.setY(bottomLeft.getY() - hOffset);
-                        bottomRight.setY(bottomRight.getY() - hOffset);
-                        update(topLeft);
-                        update(topRight);
-                        update(bottomLeft);
-                        update(bottomRight);
-                        layer.draw();
-                    }
-                    break;
-                case 88://x
-                    currentGroup.destroy();
-                    currentGroup = null;
-                    layer.draw();
-                    mouseIsInGroup = false;
-                    mouseIsOnCircle = false;
-                    break;
-            }
-            if (currentGroup) {
-                console.log("originX:", Math.round(currentGroup.getX()*zoomRatio), "originY:", Math.round(currentGroup.getY()*zoomRatio));
-            }
-            layer.draw();
-        }
-        //下一张
-        if (key == 68) {//d
-            var tags = [];
-            if (layer.get('Group').length > 0) {
-                for(var i = 0; i < layer.get('Group').length; i++) {
-                    var group = layer.get('Group')[i];
-                    var rect = group.get('Rect')[0];
+    //下一张
+    if (key == 68) {//d
+      var tags = [];
+      if (layer.get('Group').length > 0) {
+        for (var i = 0; i < layer.get('Group').length; i++) {
+          var group = layer.get('Group')[i];
+          var rect = group.get('Rect')[0];
 
-                    tags.push({
-                        "x": Math.round(group.getX() * zoomRatio),
-                        "y": Math.round(group.getY() * zoomRatio),
-                        "w": Math.round(rect.width() * zoomRatio),
-                        "h": Math.round(rect.height() * zoomRatio),
-                        "type": "car"
-                    });
+          tags.push({
+            "x": Math.round(group.getX() * zoomRatio),
+            "y": Math.round(group.getY() * zoomRatio),
+            "w": Math.round(rect.width() * zoomRatio),
+            "h": Math.round(rect.height() * zoomRatio),
+            "type": "car"
+          });
+        }
+      }
+      console.log("tags:", tags);
+      Vue.http.post("/image/" + currentImageId + "/_tag", {"objects": tags}).then(res => {
+        console.log("after tag: ", res.body);
+        let obj = res.body;
+        if (obj.status == "ok") {
+          //Load next image here!!
+          if (imageIds[gIndex + 1]) {
+            Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
+              let o = res.body;
+              echoGroups = o.objects;
+              currentImageId = o.id;
+              gIndex++;
+              imageObj.src = "/f/P_" + o.path;
+              console.log("/image/:id : ", res.body);
+            }, err => {
+              console.log("error /image/:id : ", err);
+            });
+          } else {
+            Vue.http.get('/images/_next').then(resp => {
+              console.log(resp.body);
+              let o = resp.body;
+              echoGroups = null;
+              currentImageId = o.id;
+              imageIds.push(currentImageId);
+              gIndex = imageIds.length - 1;
+              console.log(imageIds);
+              imageObj.src = "/f/P_" + o.path;
+            }, error => {
+              if (error.ok == false) {
+                switch (error.status) {
+                  case 404:
+                    alert("没有更多图片了！");
+                    break;
                 }
-            }
-            console.log("tags:", tags);
-            Vue.http.post("/image/"+currentImageId+"/_tag", {"objects": tags}).then(res => {
-                console.log("after tag: ", res.body);
-                let obj = res.body;
-                if (obj.status == "ok") {
-                    //Load next image here!!
-                    if(imageIds[gIndex + 1]) {
-                        Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
-                            let o = res.body;
-                            echoGroups = o.objects;
-                            currentImageId = o.id;
-                            gIndex++;
-                            imageObj.src = "/f/P_" + o.path;
-                            console.log("/image/:id : ", res.body);
-                        }, err => {
-                            console.log("error /image/:id : ", err);
-                        });
-                    } else {
-                        Vue.http.get('/images/_next').then(resp => {
-                            console.log(resp.body);
-                            let o = resp.body;
-                            echoGroups = null;
-                            currentImageId = o.id;
-                            imageIds.push(currentImageId);
-                            gIndex = imageIds.length - 1;
-                            console.log(imageIds);
-                            imageObj.src = "/f/P_" + o.path;
-                        }, error => {
-                            if (error.ok == false) {
-                                switch (error.status) {
-                                    case 404:
-                                        alert("没有更多图片了！");
-                                    break;
-                                }
-                            }
-                            console.log("image error: ", error);
-                        });
-                    }
+              }
+              console.log("image error: ", error);
+            });
+          }
 //                        imageObj.src = 'http://www.bz55.com/uploads/allimg/150306/139-1503061IR6.jpg';
-                }
-            }, err => {
-                console.log("tag error: ", err);
-            });
         }
-        if (key == 65) {
-            var tags = [];
-            if (layer.get('Group').length > 0) {
-                for(var i = 0; i < layer.get('Group').length; i++) {
-                    var group = layer.get('Group')[i];
-                    var rect = group.get('Rect')[0];
-
-                    tags.push({
-                        "x": Math.round(group.getX() * zoomRatio),
-                        "y": Math.round(group.getY() * zoomRatio),
-                        "w": Math.round(rect.width() * zoomRatio),
-                        "h": Math.round(rect.height() * zoomRatio),
-                        "type": "car"
-                    });
-                }
-            }
-            console.log("tags:", tags);
-            Vue.http.post("/image/"+currentImageId+"/_tag", {"objects": tags}).then(res => {
-                console.log("after tag: ", res.body);
-                let obj = res.body;
-                if (obj.status == "ok") {
-                }
-            }, err => {
-                console.log("tag error: ", err);
-            });
-            if(imageIds[gIndex - 1]) {
-                Vue.http.get("/image/" + imageIds[gIndex - 1]).then(res => {
-                    let o = res.body;
-                    echoGroups = o.objects;
-                    currentImageId = o.id;
-                    gIndex--;
-                    imageObj.src = "/f/P_" + o.path;
-                    console.log("/image/:id : ", res.body);
-                }, err => {
-                    console.log("error /image/:id : ", err);
-                });
-            } else {
-                alert("已经是第一张图片了！");
-            }
-        }
-        if(key == 81) {
-            if (layer.get('Group').length > 0) {
-                if(currentGroup) {
-                    for (let i = 0; i < layer.get('Group').length; i++) {
-                        layer.get('Group')[i].get('Rect')[0].setStroke('red');
-                    }
-                    let j = layer.get('Group').indexOf(currentGroup);
-                    if (j < layer.get('Group').length - 1) {
-                        let nextGroup = layer.get('Group')[j + 1];
-                        nextGroup.get('Rect')[0].stroke('yellow');
-                        layer.draw();
-                        currentGroup = nextGroup;
-                    } else {
-                        let nextGroup = layer.get('Group')[0];
-                        nextGroup.get('Rect')[0].stroke('yellow');
-                        layer.draw();
-                        currentGroup = nextGroup;
-                    }
-                } else {
-                    for (let i = 0; i < layer.get('Group').length; i++) {
-                        layer.get('Group')[i].get('Rect')[0].setStroke('red');
-                    }
-                    let firstGroup = layer.get('Group')[0];
-                    firstGroup.get('Rect')[0].stroke('yellow');
-                    layer.draw();
-                    currentGroup = firstGroup;
-                }
-            }
-
-        }
-//                alert(e.keyCode);
+      }, err => {
+        console.log("tag error: ", err);
+      });
     }
-    export default demarcate;
-    Array.prototype.max = function(){
-      return Math.max.apply({},this)
-    };
-    Array.prototype.min = function(){
-      return Math.min.apply({},this)
-    };
+    if (key == 65) {
+      var tags = [];
+      if (layer.get('Group').length > 0) {
+        for (var i = 0; i < layer.get('Group').length; i++) {
+          var group = layer.get('Group')[i];
+          var rect = group.get('Rect')[0];
+
+          tags.push({
+            "x": Math.round(group.getX() * zoomRatio),
+            "y": Math.round(group.getY() * zoomRatio),
+            "w": Math.round(rect.width() * zoomRatio),
+            "h": Math.round(rect.height() * zoomRatio),
+            "type": "car"
+          });
+        }
+      }
+      console.log("tags:", tags);
+      Vue.http.post("/image/" + currentImageId + "/_tag", {"objects": tags}).then(res => {
+        console.log("after tag: ", res.body);
+        let obj = res.body;
+        if (obj.status == "ok") {
+        }
+      }, err => {
+        console.log("tag error: ", err);
+      });
+      if (imageIds[gIndex - 1]) {
+        Vue.http.get("/image/" + imageIds[gIndex - 1]).then(res => {
+          let o = res.body;
+          echoGroups = o.objects;
+          currentImageId = o.id;
+          gIndex--;
+          imageObj.src = "/f/P_" + o.path;
+          console.log("/image/:id : ", res.body);
+        }, err => {
+          console.log("error /image/:id : ", err);
+        });
+      } else {
+        alert("已经是第一张图片了！");
+      }
+    }
+    if (key == 81) {
+      if (layer.get('Group').length > 0) {
+        if (currentGroup) {
+          for (let i = 0; i < layer.get('Group').length; i++) {
+            layer.get('Group')[i].get('Rect')[0].setStroke('red');
+          }
+          let j = layer.get('Group').indexOf(currentGroup);
+          if (j < layer.get('Group').length - 1) {
+            let nextGroup = layer.get('Group')[j + 1];
+            nextGroup.get('Rect')[0].stroke('yellow');
+            layer.draw();
+            currentGroup = nextGroup;
+          } else {
+            let nextGroup = layer.get('Group')[0];
+            nextGroup.get('Rect')[0].stroke('yellow');
+            layer.draw();
+            currentGroup = nextGroup;
+          }
+        } else {
+          for (let i = 0; i < layer.get('Group').length; i++) {
+            layer.get('Group')[i].get('Rect')[0].setStroke('red');
+          }
+          let firstGroup = layer.get('Group')[0];
+          firstGroup.get('Rect')[0].stroke('yellow');
+          layer.draw();
+          currentGroup = firstGroup;
+        }
+      }
+
+    }
+//                alert(e.keyCode);
+  }
+  export default demarcate;
+  Array.prototype.max = function () {
+    return Math.max.apply({}, this)
+  };
+  Array.prototype.min = function () {
+    return Math.min.apply({}, this)
+  };
 </script>
