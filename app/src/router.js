@@ -22,7 +22,7 @@ const routers = [{
     }
   ]
 }, {
-  path: '*',
+  path: '',
   redirect: { name: 'demarcate', params: { type: 'd' } }
 }];
 export default routers;

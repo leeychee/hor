@@ -41,7 +41,8 @@
       imageIds = [],//图片id数组
       gIndex = -1,//游标
       minRectSize = 60,
-      opType;//demarcate:_next,review:_review
+      opType;//demarcate:tag(default),review:review
+
   var demarcate = {
     name: 'demarcate',
     data() {
@@ -55,9 +56,9 @@
     created: function () {
       console.log("type:" + this.$route.params.type);
       if (this.$route.params.type == "r") {
-        opType = "_review";
+        opType = "review";
       } else {
-        opType = "_next";
+        opType = "tag";
       }
     },
     watch: {
@@ -110,6 +111,9 @@
         stage.addEventListener("mousemove", mouseXY, false);
         stage.addEventListener("mouseup", mouseUp, false);
 
+        imageIds = [];
+        gIndex = -1;
+
         if (imageIds[gIndex + 1]) {
           Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
             let o = res.body;
@@ -122,15 +126,15 @@
             console.log("error /image/:id : ", err);
           });
         } else {
-          Vue.http.get('/images/' + opType).then(resp => {
+          Vue.http.get("/images/_next", {params:{"type": opType}}).then(resp => {
             console.log(resp.body);
-            let obj = resp.body;
-            echoGroups = null;
-            currentImageId = obj.id;
+            let o = resp.body;
+            echoGroups = o.objects;
+            currentImageId = o.id;
             imageIds.push(currentImageId);
             gIndex = imageIds.length - 1;
             console.log(imageIds);
-            imageObj.src = "/f/P_" + obj.path;
+            imageObj.src = "/f/P_" + o.path;
           }, error => {
             if (error.ok == false) {
               switch (error.status) {
@@ -726,50 +730,48 @@
             "type": "car"
           });
         }
-      }
-      console.log("tags:", tags);
-      Vue.http.post("/image/" + currentImageId + "/_tag", {"objects": tags}).then(res => {
-        console.log("after tag: ", res.body);
-        let obj = res.body;
-        if (obj.status == "ok") {
-          //Load next image here!!
-          if (imageIds[gIndex + 1]) {
-            Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
-              let o = res.body;
-              echoGroups = o.objects;
-              currentImageId = o.id;
-              gIndex++;
-              imageObj.src = "/f/P_" + o.path;
-              console.log("/image/:id : ", res.body);
-            }, err => {
-              console.log("error /image/:id : ", err);
-            });
-          } else {
-            Vue.http.get('/images/' + opType).then(resp => {
-              console.log(resp.body);
-              let o = resp.body;
-              echoGroups = null;
-              currentImageId = o.id;
-              imageIds.push(currentImageId);
-              gIndex = imageIds.length - 1;
-              console.log(imageIds);
-              imageObj.src = "/f/P_" + o.path;
-            }, error => {
-              if (error.ok == false) {
-                switch (error.status) {
-                  case 404:
-                    alert("没有更多图片了！");
-                    break;
-                }
-              }
-              console.log("image error: ", error);
-            });
+        console.log("tags:", tags);
+        Vue.http.post("/image/" + currentImageId + "/_" + opType, {"objects": tags}).then(res => {
+          console.log("after tag: ", res.body);
+          let obj = res.body;
+          if (obj.status == "ok") {
           }
-//                        imageObj.src = 'http://www.bz55.com/uploads/allimg/150306/139-1503061IR6.jpg';
-        }
-      }, err => {
-        console.log("tag error: ", err);
-      });
+        }, err => {
+          console.log("tag error: ", err);
+        });
+      }
+      if (imageIds[gIndex + 1]) {
+        Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
+          let o = res.body;
+          echoGroups = o.objects;
+          currentImageId = o.id;
+          gIndex++;
+          imageObj.src = "/f/P_" + o.path;
+          console.log("/image/:id : ", res.body);
+        }, err => {
+          console.log("error /image/:id : ", err);
+        });
+      } else {
+        Vue.http.get("/images/_next", {params:{"type": opType}}).then(resp => {
+          console.log(resp.body);
+          let o = resp.body;
+          echoGroups = o.objects;
+          currentImageId = o.id;
+          imageIds.push(currentImageId);
+          gIndex = imageIds.length - 1;
+          console.log(imageIds);
+          imageObj.src = "/f/P_" + o.path;
+        }, error => {
+          if (error.ok == false) {
+            switch (error.status) {
+              case 404:
+                alert("没有更多图片了！");
+                break;
+            }
+          }
+          console.log("image error: ", error);
+        });
+      }
     }
     if (key == 65) {
       var tags = [];
@@ -786,16 +788,16 @@
             "type": "car"
           });
         }
+        console.log("tags:", tags);
+        Vue.http.post("/image/" + currentImageId + "/_" + opType, {"objects": tags}).then(res => {
+          console.log("after tag: ", res.body);
+          let obj = res.body;
+          if (obj.status == "ok") {
+          }
+        }, err => {
+          console.log("tag error: ", err);
+        });
       }
-      console.log("tags:", tags);
-      Vue.http.post("/image/" + currentImageId + "/_tag", {"objects": tags}).then(res => {
-        console.log("after tag: ", res.body);
-        let obj = res.body;
-        if (obj.status == "ok") {
-        }
-      }, err => {
-        console.log("tag error: ", err);
-      });
       if (imageIds[gIndex - 1]) {
         Vue.http.get("/image/" + imageIds[gIndex - 1]).then(res => {
           let o = res.body;

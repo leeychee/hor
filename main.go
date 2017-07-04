@@ -28,7 +28,7 @@ func main() {
 	r.Static("dist", "app/dist")
 
 	r.GET("/", func(c *gin.Context) {
-		c.Redirect(302, "app")
+		c.Redirect(302, "app/")
 	})
 	// Rebuild db from the given path
 	r.POST("/manage/_rebuild", func(c *gin.Context) {
