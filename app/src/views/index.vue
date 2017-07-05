@@ -87,6 +87,13 @@
     margin-right: 27%;
   }
 
+  .operate-tip {
+    z-index: 2;
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+  }
+
 </style>
 <template>
   <div class="layout" :class="{'layout-hide-text': spanLeft < 4}">
@@ -113,9 +120,6 @@
       </i-col>
       <i-col :span="spanMiddle">
         <div v-if="showHeader" class="layout-header">
-          <!--<i-button type="text" @click="toggleLeftClick">-->
-          <!--<Icon type="navicon" size="32"></Icon>-->
-          <!--</i-button>-->
           <h1 style="display: inline;position: absolute;margin-left: 10px;">{{title}}</h1>
           <div v-if="showRectSet" style="float: right;margin: 5px;">
             <h3 style="display: inline;">最小选框尺寸(px)：</h3>
@@ -123,15 +127,21 @@
               <Option v-for="item in minList" :value="item.value" :key="item">{{ item.label }}</Option>
             </Select>
           </div>
-          <!--<i-button type="text" class="right-toggle-btn" :class="{'left-hide-right-toggle-btn': spanLeft < 4}" >-->
-          <!--<Icon type="navicon" size="32"></Icon>-->
-          <!--</i-button>-->
         </div>
         <div class="layout-content">
           <router-view :minSize.sync="minSize" :key="key"></router-view>
         </div>
       </i-col>
     </Row>
+    <div class="operate-tip">
+      <Poptip trigger="hover" placement="right-end" >
+        <Icon type="compass" size="24" color="#aaa"></Icon>
+        <div slot="title"><h3>操作快捷键</h3></div>
+        <div slot="content">
+          <Table :columns="columnsTip" :data="dataTip" width="250"></Table>
+        </div>
+      </Poptip>
+    </div>
   </div>
 </template>
 <script>
@@ -173,8 +183,48 @@
           }
         ],
         minSize: '60',
-        showRectSet: true
-      }
+        showRectSet: true,
+        columnsTip: [
+          {
+            title: '按键',
+            key: 'key'
+          },
+          {
+            title: '操作',
+            key: 'value'
+          }
+        ],
+        dataTip: [
+          {
+            key: 'w',
+            value: '放大'
+          },
+          {
+            key: 's',
+            value: '缩小'
+          },
+          {
+            key: 'a',
+            value: '上一张'
+          },
+          {
+            key: 'd',
+            value: '下一张'
+          },
+          {
+            key: 'q',
+            value: '切换选框'
+          },
+          {
+            key: 'x',
+            value: '删除选中选框'
+          },
+          {
+            key: '↑→↓←',
+            value: '移动选中选框'
+          }
+        ]
+      };
     },
     computed: {
       iconSize () {

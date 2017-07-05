@@ -139,7 +139,7 @@
             if (error.ok == false) {
               switch (error.status) {
                 case 404:
-                  alert("已经是最后一张图片了");
+                  alert("没有更多图片了");
                   break;
               }
             }
@@ -773,7 +773,7 @@
         });
       }
     }
-    if (key == 65) {
+    if (key == 65) {//a
       var tags = [];
       if (layer.get('Group').length > 0) {
         for (var i = 0; i < layer.get('Group').length; i++) {
@@ -813,7 +813,7 @@
         alert("已经是第一张图片了！");
       }
     }
-    if (key == 81) {
+    if (key == 81) {//q
       if (layer.get('Group').length > 0) {
         if (currentGroup) {
           for (let i = 0; i < layer.get('Group').length; i++) {
