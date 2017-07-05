@@ -52,10 +52,10 @@
 //                aspectRatio : this.stageWidth/this.stageHeight,
       };
     },
-    props: ['minSize'],
+    props: ['minSize','type'],
     created: function () {
-      console.log("type:" + this.$route.params.type);
-      if (this.$route.params.type == "r") {
+      console.log("type:" + this.type);
+      if (this.type == "r") {
         opType = "review";
       } else {
         opType = "tag";
@@ -64,9 +64,6 @@
     watch: {
       minSize: function (val) {
         minRectSize = val;
-      },
-      '$route.params.type': function (val) {
-        console.log("route-type:", val);
       },
       '$route' (to, from) {
         // 对路由变化作出响应...

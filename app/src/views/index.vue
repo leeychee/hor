@@ -138,7 +138,7 @@
         <Icon type="compass" size="24" color="#aaa"></Icon>
         <div slot="title"><h3>操作快捷键</h3></div>
         <div slot="content">
-          <Table :columns="columnsTip" :data="dataTip" width="250"></Table>
+          <Table :columns="columnsTip" :data="dataTip" ></Table>
         </div>
       </Poptip>
     </div>
@@ -187,22 +187,17 @@
         columnsTip: [
           {
             title: '按键',
-            key: 'key'
+            key: 'key',
+            width: 60
           },
           {
             title: '操作',
-            key: 'value'
+            key: 'value',
+            width: 110
+
           }
         ],
         dataTip: [
-          {
-            key: 'w',
-            value: '放大'
-          },
-          {
-            key: 's',
-            value: '缩小'
-          },
           {
             key: 'a',
             value: '上一张'
@@ -210,6 +205,14 @@
           {
             key: 'd',
             value: '下一张'
+          },
+          {
+            key: 'w',
+            value: '放大'
+          },
+          {
+            key: 's',
+            value: '缩小'
           },
           {
             key: 'q',
@@ -220,7 +223,7 @@
             value: '删除选中选框'
           },
           {
-            key: '↑→↓←',
+            key: '↑→←↓',
             value: '移动选中选框'
           }
         ]

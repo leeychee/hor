@@ -8,7 +8,8 @@ const routers = [{
     {
       name: 'demarcate',
       path: 'demarcate/:type',
-      component: (resolve) => require(['./views/demarcate.vue'], resolve)
+      component: (resolve) => require(['./views/demarcate.vue'], resolve),
+      props: true
     },
     {
       name: 'review',
