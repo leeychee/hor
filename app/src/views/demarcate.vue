@@ -136,7 +136,7 @@
             if (error.ok == false) {
               switch (error.status) {
                 case 404:
-                  alert("没有更多图片了");
+                  this.$Message.warning("没有更多图片了");
                   break;
               }
             }
@@ -762,7 +762,7 @@
           if (error.ok == false) {
             switch (error.status) {
               case 404:
-                alert("没有更多图片了！");
+                this.$Message.warning("没有更多图片了！");
                 break;
             }
           }
@@ -807,7 +807,7 @@
           console.log("error /image/:id : ", err);
         });
       } else {
-        alert("已经是第一张图片了！");
+        this.$Message.warning("已经是第一张图片了！");
       }
     }
     if (key == 81) {//q
