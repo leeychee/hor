@@ -25,7 +25,10 @@
   import Konva from 'konva';
   import Vue from 'vue'
   import VueResource from 'vue-resource'
+  import iView from 'iview';
   Vue.use(VueResource);
+  Vue.use(iView);
+
   var stage,
       layer,
       drawCanvas,
@@ -728,15 +731,15 @@
           });
         }
         console.log("tags:", tags);
-        Vue.http.post("/image/" + currentImageId + "/_" + opType, {"objects": tags}).then(res => {
-          console.log("after tag: ", res.body);
-          let obj = res.body;
-          if (obj.status == "ok") {
-          }
-        }, err => {
-          console.log("tag error: ", err);
-        });
       }
+      Vue.http.post("/image/" + currentImageId + "/_" + opType, {"objects": tags}).then(res => {
+        console.log("after tag: ", res.body);
+        let obj = res.body;
+        if (obj.status == "ok") {
+        }
+      }, err => {
+        console.log("tag error: ", err);
+      });
       if (imageIds[gIndex + 1]) {
         Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
           let o = res.body;
@@ -762,7 +765,7 @@
           if (error.ok == false) {
             switch (error.status) {
               case 404:
-                this.$Message.warning("没有更多图片了！");
+                iView.Message.warning("没有更多图片了！");
                 break;
             }
           }
@@ -786,15 +789,15 @@
           });
         }
         console.log("tags:", tags);
-        Vue.http.post("/image/" + currentImageId + "/_" + opType, {"objects": tags}).then(res => {
-          console.log("after tag: ", res.body);
-          let obj = res.body;
-          if (obj.status == "ok") {
-          }
-        }, err => {
-          console.log("tag error: ", err);
-        });
       }
+      Vue.http.post("/image/" + currentImageId + "/_" + opType, {"objects": tags}).then(res => {
+        console.log("after tag: ", res.body);
+        let obj = res.body;
+        if (obj.status == "ok") {
+        }
+      }, err => {
+        console.log("tag error: ", err);
+      });
       if (imageIds[gIndex - 1]) {
         Vue.http.get("/image/" + imageIds[gIndex - 1]).then(res => {
           let o = res.body;
@@ -807,7 +810,7 @@
           console.log("error /image/:id : ", err);
         });
       } else {
-        this.$Message.warning("已经是第一张图片了！");
+        iView.Message.warning("已经是第一张图片了！");
       }
     }
     if (key == 81) {//q
