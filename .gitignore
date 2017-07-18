@@ -1,4 +1,7 @@
 *.jpg
 *.db
+*.db.*
 *.db.lock
 .idea/
+.vscode/
+hor

@@ -1,13 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"encoding/json"
+	"time"
 
 	"github.com/boltdb/bolt"
 )
@@ -123,9 +124,11 @@ func (s *store) Rebuild() error {
 	if err := s.Close(); err != nil {
 		return err
 	}
-	if err := os.Remove(s.dbpath); err != nil {
+	backpath := fmt.Sprintf("%s.%d", s.dbpath, time.Now().Unix())
+	if err := os.Rename(s.dbpath, backpath); err != nil {
 		return err
 	}
+	fmt.Printf("backup db to %s.", backpath)
 	s1, err := newStore(s.path)
 	if err != nil {
 		return err
