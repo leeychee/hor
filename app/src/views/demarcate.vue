@@ -737,41 +737,41 @@
         let obj = res.body;
         if (obj.status == "ok") {
         }
+        if (imageIds[gIndex + 1]) {
+          Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
+            let o = res.body;
+            echoGroups = o.objects;
+            currentImageId = o.id;
+            gIndex++;
+            imageObj.src = "/f/P_" + o.path;
+            console.log("/image/:id : ", res.body);
+          }, err => {
+            console.log("error /image/:id : ", err);
+          });
+        } else {
+          Vue.http.get("/images/_next", {params:{"type": opType}}).then(resp => {
+            console.log(resp.body);
+            let o = resp.body;
+            echoGroups = o.objects;
+            currentImageId = o.id;
+            imageIds.push(currentImageId);
+            gIndex = imageIds.length - 1;
+            console.log(imageIds);
+            imageObj.src = "/f/P_" + o.path;
+          }, error => {
+            if (error.ok == false) {
+              switch (error.status) {
+                case 404:
+                  iView.Message.warning("没有更多图片了！");
+                  break;
+              }
+            }
+            console.log("image error: ", error);
+          });
+        }
       }, err => {
         console.log("tag error: ", err);
       });
-      if (imageIds[gIndex + 1]) {
-        Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
-          let o = res.body;
-          echoGroups = o.objects;
-          currentImageId = o.id;
-          gIndex++;
-          imageObj.src = "/f/P_" + o.path;
-          console.log("/image/:id : ", res.body);
-        }, err => {
-          console.log("error /image/:id : ", err);
-        });
-      } else {
-        Vue.http.get("/images/_next", {params:{"type": opType}}).then(resp => {
-          console.log(resp.body);
-          let o = resp.body;
-          echoGroups = o.objects;
-          currentImageId = o.id;
-          imageIds.push(currentImageId);
-          gIndex = imageIds.length - 1;
-          console.log(imageIds);
-          imageObj.src = "/f/P_" + o.path;
-        }, error => {
-          if (error.ok == false) {
-            switch (error.status) {
-              case 404:
-                iView.Message.warning("没有更多图片了！");
-                break;
-            }
-          }
-          console.log("image error: ", error);
-        });
-      }
     }
     if (key == 65) {//a
       var tags = [];
@@ -795,23 +795,23 @@
         let obj = res.body;
         if (obj.status == "ok") {
         }
+        if (imageIds[gIndex - 1]) {
+          Vue.http.get("/image/" + imageIds[gIndex - 1]).then(res => {
+            let o = res.body;
+            echoGroups = o.objects;
+            currentImageId = o.id;
+            gIndex--;
+            imageObj.src = "/f/P_" + o.path;
+            console.log("/image/:id : ", res.body);
+          }, err => {
+            console.log("error /image/:id : ", err);
+          });
+        } else {
+          iView.Message.warning("已经是第一张图片了！");
+        }
       }, err => {
         console.log("tag error: ", err);
       });
-      if (imageIds[gIndex - 1]) {
-        Vue.http.get("/image/" + imageIds[gIndex - 1]).then(res => {
-          let o = res.body;
-          echoGroups = o.objects;
-          currentImageId = o.id;
-          gIndex--;
-          imageObj.src = "/f/P_" + o.path;
-          console.log("/image/:id : ", res.body);
-        }, err => {
-          console.log("error /image/:id : ", err);
-        });
-      } else {
-        iView.Message.warning("已经是第一张图片了！");
-      }
     }
     if (key == 81) {//q
       if (layer.get('Group').length > 0) {
