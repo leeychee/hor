@@ -27,11 +27,12 @@ type objects struct {
 }
 
 type image struct {
-	ID         uint64    `json:"id"`
-	Path       string    `json:"path"`
-	Identified int       `json:"identified"`
-	Reviewed   int       `json:"reviewed"`
-	Objects    []*object `json:"objects"`
+	ID           uint64    `json:"id"`
+	Path         string    `json:"path"`
+	Identified   int       `json:"identified"`
+	Reviewed     int       `json:"reviewed"`
+	Objects      []*object `json:"objects"`
+	ModifiedTime time.Time `json:"modified_time"`
 }
 
 type stat struct {
@@ -143,16 +144,25 @@ func (s *store) Close() error {
 
 func (s *store) NextImage(t string) (*image, error) {
 	var img *image
-	err := s.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(imgBucketName).Cursor()
-		img = &image{}
-		for k, v := b.First(); k != nil; k, v = b.Next() {
+	err := s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(imgBucketName)
+		bc := b.Cursor()
+		var img *image
+		for k, v := bc.First(); k != nil; k, v = bc.Next() {
+			img = &image{}
 			if err := json.Unmarshal(v, img); err != nil {
 				return err
 			}
-			if t == "tag" && img.Identified == 0 {
+			if t == "tag" && img.Identified == 0 && time.Since(img.ModifiedTime) > time.Second*60 {
+				fmt.Printf("%s\n", img.ModifiedTime)
+				img.ModifiedTime = time.Now()
+				buf, _ := json.Marshal(img)
+				b.Put(itob(img.ID), buf)
 				return nil
-			} else if t == "review" && img.Identified > 0 && img.Reviewed == 0 {
+			} else if t == "review" && img.Identified > 0 && img.Reviewed == 0 && time.Since(img.ModifiedTime) > time.Second*60 {
+				img.ModifiedTime = time.Now()
+				buf, _ := json.Marshal(img)
+				b.Put(itob(img.ID), buf)
 				return nil
 			}
 		}
