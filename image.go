@@ -95,7 +95,7 @@ func (s *store) init() error {
 		filepath.Walk(s.path, func(path string, f os.FileInfo, err error) error {
 			if !f.IsDir() && strings.HasPrefix(f.Name(), "P_") {
 				log.Printf("Find a image: %s\n", path)
-				relativePath := path[len(s.path)+1:]
+				relativePath := path[len(s.path)-1:]
 				imgC <- relativePath
 			}
 			return nil
