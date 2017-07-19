@@ -120,7 +120,7 @@
             echoGroups = o.objects;
             currentImageId = o.id;
             gIndex++;
-            imageObj.src = "/f/P_" + o.path;
+            imageObj.src = "/f/" + o.path;
             console.log("/image/:id : ", res.body);
           }, err => {
             console.log("error /image/:id : ", err);
@@ -140,6 +140,9 @@
               switch (error.status) {
                 case 404:
                   this.$Message.warning("没有更多图片了");
+                  break;
+                default:
+                  this.$Message.error("服务器好像出了点问题！");
                   break;
               }
             }
@@ -619,7 +622,7 @@
     return false;
   };
   function check(e) {
-    var key = event.which || event.keyCode;
+    var key = e.which || e.keyCode;
     if (currentGroup) {
       var rect = currentGroup.get('Rect')[0];
       var rectRatio = rect.width() / rect.height();
@@ -764,6 +767,9 @@
                 case 404:
                   iView.Message.warning("没有更多图片了！");
                   break;
+                default:
+                  this.$Message.error("服务器好像出了点问题！");
+                  break;
               }
             }
             console.log("image error: ", error);
@@ -801,7 +807,7 @@
             echoGroups = o.objects;
             currentImageId = o.id;
             gIndex--;
-            imageObj.src = "/f/P_" + o.path;
+            imageObj.src = "/f/" + o.path;
             console.log("/image/:id : ", res.body);
           }, err => {
             console.log("error /image/:id : ", err);
