@@ -147,7 +147,6 @@ func (s *store) NextImage(t string) (*image, error) {
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(imgBucketName)
 		bc := b.Cursor()
-		var img *image
 		for k, v := bc.First(); k != nil; k, v = bc.Next() {
 			img = &image{}
 			if err := json.Unmarshal(v, img); err != nil {
