@@ -134,7 +134,7 @@
             imageIds.push(currentImageId);
             gIndex = imageIds.length - 1;
             console.log(imageIds);
-            imageObj.src = "/f/P_" + o.path;
+            imageObj.src = "/f/" + o.path;
           }, error => {
             if (error.ok == false) {
               switch (error.status) {
@@ -746,7 +746,7 @@
             echoGroups = o.objects;
             currentImageId = o.id;
             gIndex++;
-            imageObj.src = "/f/P_" + o.path;
+            imageObj.src = "/f/" + o.path;
             console.log("/image/:id : ", res.body);
           }, err => {
             console.log("error /image/:id : ", err);
@@ -760,7 +760,7 @@
             imageIds.push(currentImageId);
             gIndex = imageIds.length - 1;
             console.log(imageIds);
-            imageObj.src = "/f/P_" + o.path;
+            imageObj.src = "/f/" + o.path;
           }, error => {
             if (error.ok == false) {
               switch (error.status) {
