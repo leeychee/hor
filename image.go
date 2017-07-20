@@ -153,7 +153,6 @@ func (s *store) NextImage(t string) (*image, error) {
 				return err
 			}
 			if t == "tag" && img.Identified == 0 && time.Since(img.ModifiedTime) > time.Second*60 {
-				fmt.Printf("%s\n", img.ModifiedTime)
 				img.ModifiedTime = time.Now()
 				buf, _ := json.Marshal(img)
 				b.Put(itob(img.ID), buf)
