@@ -13,6 +13,10 @@ import (
 	"github.com/boltdb/bolt"
 )
 
+type version struct {
+	Version string `json:"version"`
+}
+
 type object struct {
 	X    int    `json:"x"`
 	Y    int    `json:"y"`
@@ -32,7 +36,9 @@ type image struct {
 	Identified   int       `json:"identified"`
 	Reviewed     int       `json:"reviewed"`
 	Objects      []*object `json:"objects"`
-	ModifiedTime time.Time `json:"modified_time"`
+	CheckoutTime time.Time `json:"checkout_time"`
+	DemarkedTime time.Time `json:"demarked_time"`
+	ReviewedTime time.Time `json:"reviewed_time"`
 }
 
 type stat struct {
@@ -152,13 +158,13 @@ func (s *store) NextImage(t string) (*image, error) {
 			if err := json.Unmarshal(v, img); err != nil {
 				return err
 			}
-			if t == "tag" && img.Identified == 0 && time.Since(img.ModifiedTime) > time.Second*60 {
-				img.ModifiedTime = time.Now()
+			if t == "tag" && img.Identified == 0 && time.Since(img.CheckoutTime) > time.Second*60 {
+				img.CheckoutTime = time.Now()
 				buf, _ := json.Marshal(img)
 				b.Put(itob(img.ID), buf)
 				return nil
-			} else if t == "review" && img.Identified > 0 && img.Reviewed == 0 && time.Since(img.ModifiedTime) > time.Second*60 {
-				img.ModifiedTime = time.Now()
+			} else if t == "review" && img.Identified > 0 && img.Reviewed == 0 && time.Since(img.CheckoutTime) > time.Second*60 {
+				img.CheckoutTime = time.Now()
 				buf, _ := json.Marshal(img)
 				b.Put(itob(img.ID), buf)
 				return nil
@@ -189,6 +195,7 @@ func (s *store) CreateImage(img *image) error {
 func (s *store) UpdateImage(img *image) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(imgBucketName)
+		img.CheckoutTime = time.Time{}
 		buf, _ := json.Marshal(img)
 		b.Put(itob(img.ID), buf)
 		return nil
