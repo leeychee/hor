@@ -26,6 +26,7 @@
   import Vue from 'vue'
   import VueResource from 'vue-resource'
   import iView from 'iview';
+  import Bus from '../libs/bus';
   Vue.use(VueResource);
   Vue.use(iView);
 
@@ -55,7 +56,7 @@
 //                aspectRatio : this.stageWidth/this.stageHeight,
       };
     },
-    props: ['minSize','type'],
+    props: ['minSize', 'type'],
     created: function () {
       console.log("type:" + this.type);
       if (this.type == "r") {
@@ -121,12 +122,13 @@
             currentImageId = o.id;
             gIndex++;
             imageObj.src = "/f/" + o.path;
+            this.$emit('updateImgName', o.path);
             console.log("/image/:id : ", res.body);
           }, err => {
             console.log("error /image/:id : ", err);
           });
         } else {
-          Vue.http.get("/images/_next", {params:{"type": opType}}).then(resp => {
+          Vue.http.get("/images/_next", {params: {"type": opType}}).then(resp => {
             console.log(resp.body);
             let o = resp.body;
             echoGroups = o.objects;
@@ -135,6 +137,7 @@
             gIndex = imageIds.length - 1;
             console.log(imageIds);
             imageObj.src = "/f/" + o.path;
+            this.$emit('updateImgName', o.path);
           }, error => {
             if (error.ok == false) {
               switch (error.status) {
@@ -149,7 +152,6 @@
             console.log("image error: ", error);
           });
         }
-//                imageObj.src = 'http://www.bz55.com/uploads/allimg/150306/139-1503061IR6.jpg';
         imageObj.onload = function () {
           aspectRatio = stage.width() / stage.height();
           imgStageWidth = imageObj.width / imageObj.height >= aspectRatio ? stage.width() : imageObj.width / imageObj.height * stage.height();
@@ -250,6 +252,8 @@
                     this.stroke('yellow');
                     layer.draw();
                     currentGroup = this.getParent();
+                    currentGroup.moveToTop();
+                    layer.draw();
                   }
                 }
               });
@@ -372,6 +376,8 @@
               this.stroke('yellow');
               layer.draw();
               currentGroup = this.getParent();
+              currentGroup.moveToTop();
+              layer.draw();
             }
           }
         });
@@ -617,7 +623,7 @@
     });
     group.add(anchor);
   }
-  window.addEventListener('keydown', check, true);
+  addEventListener('keydown', check, true);
   document.oncontextmenu = function () {
     return false;
   };
@@ -747,28 +753,32 @@
             currentImageId = o.id;
             gIndex++;
             imageObj.src = "/f/" + o.path;
+            Bus.$emit('updateImgName', o.path);
             console.log("/image/:id : ", res.body);
           }, err => {
             console.log("error /image/:id : ", err);
           });
         } else {
-          Vue.http.get("/images/_next", {params:{"type": opType}}).then(resp => {
+          Vue.http.get("/images/_next", {params: {"type": opType}}).then(resp => {
             console.log(resp.body);
             let o = resp.body;
             echoGroups = o.objects;
             currentImageId = o.id;
+            Bus.$emit('updateCounts', imageIds.length);
             imageIds.push(currentImageId);
             gIndex = imageIds.length - 1;
             console.log(imageIds);
             imageObj.src = "/f/" + o.path;
+            Bus.$emit('updateImgName', o.path);
           }, error => {
+            Bus.$emit('updateCounts', imageIds.length);
             if (error.ok == false) {
               switch (error.status) {
                 case 404:
                   iView.Message.warning("没有更多图片了！");
                   break;
                 default:
-                  this.$Message.error("服务器好像出了点问题！");
+                  iView.$Message.error("服务器好像出了点问题！");
                   break;
               }
             }
@@ -808,6 +818,7 @@
             currentImageId = o.id;
             gIndex--;
             imageObj.src = "/f/" + o.path;
+            Bus.$emit('updateImgName', o.path);
             console.log("/image/:id : ", res.body);
           }, err => {
             console.log("error /image/:id : ", err);
@@ -837,6 +848,8 @@
             layer.draw();
             currentGroup = nextGroup;
           }
+          currentGroup.moveToTop();
+          layer.draw();
         } else {
           for (let i = 0; i < layer.get('Group').length; i++) {
             layer.get('Group')[i].get('Rect')[0].setStroke('red');
@@ -845,7 +858,10 @@
           firstGroup.get('Rect')[0].stroke('yellow');
           layer.draw();
           currentGroup = firstGroup;
+          currentGroup.moveToTop();
+          layer.draw();
         }
+
       }
 
     }

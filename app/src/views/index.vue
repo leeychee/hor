@@ -120,25 +120,31 @@
       </i-col>
       <i-col :span="spanMiddle">
         <div v-if="showHeader" class="layout-header">
-          <h1 style="display: inline;position: absolute;margin-left: 10px;">{{title}}</h1>
+          <h1 style="display: inline;margin-left: 10px;">{{title}}</h1>
+          <Tag v-if="showCurrent" style="margin-left: 30px;" type="dot" color="blue"><b>Current Image: {{imgName}}</b>
+          </Tag>
+          <!--<h4 style="display: inline;margin-left: 30px;">{{imgName}}</h4>-->
+          <Tag v-if="showCurrent" style="margin-left: 30px;" type="dot" color="blue"><b>Current
+            Counts：{{currentCounts}}</b></Tag>
+          <!--<h4 style="display: inline;margin-left: 30px;">Current Counts：{{currentCounts}}</h4>-->
           <div v-if="showRectSet" style="float: right;margin: 5px;">
-            <h3 style="display: inline;">最小选框尺寸(px)：</h3>
+            <h3 style="display: inline;">Min Rect Size(px)：</h3>
             <Select v-model="minSize" size="small" style="width:50px;" @on-change="changeMinSize">
               <Option v-for="item in minList" :value="item.value" :key="item">{{ item.label }}</Option>
             </Select>
           </div>
         </div>
         <div class="layout-content">
-          <router-view :minSize.sync="minSize" :key="key"></router-view>
+          <router-view :minSize.sync="minSize" v-on:updateImgName="showImgName" :key="key"></router-view>
         </div>
       </i-col>
     </Row>
     <div class="operate-tip">
-      <Poptip trigger="hover" placement="right-end" >
+      <Poptip trigger="hover" placement="right-end">
         <Icon type="compass" size="24" color="#aaa"></Icon>
         <div slot="title"><h3>操作快捷键</h3></div>
         <div slot="content">
-          <Table :columns="columnsTip" :data="dataTip" ></Table>
+          <Table :columns="columnsTip" :data="dataTip"></Table>
         </div>
       </Poptip>
     </div>
@@ -147,6 +153,7 @@
 <script>
   import logoUrl from '../static/img/hor.svg'
   import demarcate from './demarcate.vue'
+  import Bus from '../libs/bus';
   export default {
     data () {
       return {
@@ -184,6 +191,7 @@
         ],
         minSize: '60',
         showRectSet: true,
+        showCurrent: true,
         columnsTip: [
           {
             title: '按键',
@@ -226,7 +234,9 @@
             key: '↑→←↓',
             value: '移动选中选框'
           }
-        ]
+        ],
+        imgName: '',
+        currentCounts: 0
       };
     },
     computed: {
@@ -236,6 +246,14 @@
       key() {
         return this.$route.name !== undefined ? this.$route.name + new Date() : this.$route + new Date()
       }
+    },
+    created: function () {
+      Bus.$on("updateImgName", imgName => {
+        this.imgName = imgName;
+      });
+      Bus.$on("updateCounts", count => {
+        this.currentCounts = count;
+      });
     },
     methods: {
       toggleLeftClick () {
@@ -255,22 +273,32 @@
 //                        this.$router.replace('demarcate');
             this.$router.replace({name: 'demarcate', params: {type: 'd'}});
             this.title = "Demarcate";
+            this.imgName = "";
+            this.currentCounts = 0;
             this.showRectSet = true;
+            this.showCurrent = true;
             break;
           case "2":
 //                        this.$router.replace('review');
             this.$router.replace({name: 'demarcate', params: {type: 'r'}});
             this.title = "Review";
+            this.imgName = "";
+            this.currentCounts = 0;
             this.showRectSet = false;
+            this.showCurrent = true;
             break;
           case "3":
             this.$router.replace({name: 'export'});
             this.title = "Export";
             this.showRectSet = false;
+            this.showCurrent = false;
             break;
         }
       },
       changeMinSize (val) {
+      },
+      showImgName: function (imgName) {
+        this.imgName = imgName;
       }
     },
     mounted: function () {
