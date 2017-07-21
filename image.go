@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"io"
+
 	"github.com/boltdb/bolt"
 )
 
@@ -133,6 +135,32 @@ func (s *store) Rebuild() error {
 	}
 	backpath := fmt.Sprintf("%s.%d", s.dbpath, time.Now().Unix())
 	if err := os.Rename(s.dbpath, backpath); err != nil {
+		return err
+	}
+	fmt.Printf("backup db to %s.", backpath)
+	s1, err := newStore(s.path)
+	if err != nil {
+		return err
+	}
+	s.db = s1.db
+	return nil
+}
+
+func (s *store) Backup() error {
+	if err := s.Close(); err != nil {
+		return err
+	}
+	backpath := fmt.Sprintf("%s.%d", s.dbpath, time.Now().Unix())
+	f, err := os.Open(s.dbpath)
+	if err != nil {
+		return err
+	}
+	bf, err := os.OpenFile(backpath, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(bf, f)
+	if err != nil {
 		return err
 	}
 	fmt.Printf("backup db to %s.", backpath)
