@@ -387,6 +387,15 @@
         addAnchor(rectGroup, w, 0, 'topRight');
         addAnchor(rectGroup, 0, h, 'bottomLeft');
         addAnchor(rectGroup, w, h, 'bottomRight');
+
+        //make drawing group as current group
+        for (var i = 0; i < layer.get('Group').length; i++) {
+          layer.get('Group')[i].get('Rect')[0].setStroke('red');
+        }
+        rectGroup.get('Rect')[0].setStroke('yellow');
+        layer.draw();
+        currentGroup = rectGroup;
+        currentGroup.moveToTop();
       }
 
       context.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
