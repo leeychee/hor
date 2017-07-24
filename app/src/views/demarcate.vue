@@ -159,6 +159,7 @@
           });
         }
         imageObj.onload = function () {
+          stage.removeEventListener("mousedown", mouseDown, false);
           stage.addEventListener("mousedown", mouseDown, false);
           aspectRatio = stage.width() / stage.height();
           imgStageWidth = imageObj.width / imageObj.height >= aspectRatio ? stage.width() : imageObj.width / imageObj.height * stage.height();
@@ -228,7 +229,7 @@
                 }
               });
               rectGroup.on('dragmove', function () {
-                //                console.log("x:" + this.getX(), "y:" + this.getY());
+//                console.log("x:" + this.getX(), "y:" + this.getY());
                 console.log("originX:", Math.round(this.getX() * zoomRatio), "originY:", Math.round(this.getY() * zoomRatio));
               });
               rectGroup.on('mouseover', function () {
@@ -267,6 +268,12 @@
                       });
                     }
                     this.stroke('yellow');
+                    this.on('mouseover', function () {
+                      document.body.style.cursor = 'move';
+                    });
+                    this.on('mouseout', function () {
+                      document.body.style.cursor = 'default';
+                    });
                     currentGroup = this.getParent();
                     currentGroup.moveToTop();
                     document.body.style.cursor = 'move';
@@ -275,14 +282,12 @@
                     stage.removeEventListener("mousedown", mouseDown, false);
                     currentGroup.on('mouseover', function () {
                       console.log("Mouse is on current group");
-                      document.body.style.cursor = 'move';
                       mouseIsOnCurrentGroup = true;
                       this.draggable(true);
                       stage.removeEventListener("mousedown", mouseDown, false);
                     });
                     currentGroup.on('mouseout', function () {
                       console.log("Mouse is out of current group");
-                      document.body.style.cursor = 'default';
                       mouseIsOnCurrentGroup = false;
                       this.draggable(false);
                       stage.addEventListener("mousedown", mouseDown, false);
@@ -377,7 +382,7 @@
           }
         });
         rectGroup.on('dragmove', function () {
-          //                console.log("x:" + this.getX(), "y:" + this.getY());
+//          console.log("x:" + this.getX(), "y:" + this.getY());
           console.log("originX:", Math.round(this.getX() * zoomRatio), "originY:", Math.round(this.getY() * zoomRatio));
         });
         rectGroup.on('mouseover', function () {
@@ -416,6 +421,12 @@
                 });
               }
               this.stroke('yellow');
+              this.on('mouseover', function () {
+                document.body.style.cursor = 'move';
+              });
+              this.on('mouseout', function () {
+                document.body.style.cursor = 'default';
+              });
               currentGroup = this.getParent();
               currentGroup.moveToTop();
               document.body.style.cursor = 'move';
@@ -423,13 +434,11 @@
               currentGroup.draggable(true);
               stage.removeEventListener("mousedown", mouseDown, false);
               currentGroup.on('mouseover', function () {
-                document.body.style.cursor = 'move';
                 mouseIsOnCurrentGroup = true;
                 this.draggable(true);
                 stage.removeEventListener("mousedown", mouseDown, false);
               });
               currentGroup.on('mouseout', function () {
-                document.body.style.cursor = 'default';
                 mouseIsOnCurrentGroup = false;
                 this.draggable(false);
                 stage.addEventListener("mousedown", mouseDown, false);
@@ -463,14 +472,18 @@
         layer.draw();
         currentGroup = rectGroup;
         currentGroup.moveToTop();
-        currentGroup.on('mouseover', function () {
+        currentGroup.get('Rect')[0].on('mouseover', function () {
           document.body.style.cursor = 'move';
+        });
+        currentGroup.get('Rect')[0].on('mouseout', function () {
+          document.body.style.cursor = 'default';
+        });
+        currentGroup.on('mouseover', function () {
           mouseIsOnCurrentGroup = true;
           this.draggable(true);
           stage.removeEventListener("mousedown", mouseDown, false);
         });
         currentGroup.on('mouseout', function () {
-          document.body.style.cursor = 'default';
           mouseIsOnCurrentGroup = false;
           this.draggable(false);
           stage.addEventListener("mousedown", mouseDown, false);
@@ -533,7 +546,6 @@
     var rect = group.get('Rect')[0];
     var anchorX = activeAnchor.getX();
     var anchorY = activeAnchor.getY();
-    var tmp;
 
 //        console.log("anchorX:"+anchorX,"anchorY:"+anchorY);
     switch (activeAnchor.getName()) {
@@ -818,6 +830,7 @@
           layer.draw();
           mouseIsInGroup = false;
           mouseIsOnCircle = false;
+          stage.addEventListener("mousedown", mouseDown, false);
           break;
       }
       if (currentGroup) {
