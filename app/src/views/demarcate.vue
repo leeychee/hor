@@ -47,6 +47,12 @@
       minRectSize = 60,
       opType;//demarcate:tag(default),review:review
 
+  var startX, endX, startY, endY;
+  var mouseIsDown,
+      mouseIsInGroup,
+      mouseIsOnCircle,
+      mouseIsOnCurrentGroup;
+
   var demarcate = {
     name: 'demarcate',
     data() {
@@ -153,6 +159,7 @@
           });
         }
         imageObj.onload = function () {
+          stage.addEventListener("mousedown", mouseDown, false);
           aspectRatio = stage.width() / stage.height();
           imgStageWidth = imageObj.width / imageObj.height >= aspectRatio ? stage.width() : imageObj.width / imageObj.height * stage.height();
           imgStageHeight = imageObj.width / imageObj.height >= aspectRatio ? imageObj.height / imageObj.width * stage.width() : stage.height();
@@ -247,12 +254,39 @@
                   var h1 = startY <= endY ? endY - startY : startY - endY;
                   if (w1 < minRectSize && h1 < minRectSize) {
                     for (var i = 0; i < layer.get('Group').length; i++) {
-                      layer.get('Group')[i].get('Rect')[0].setStroke('red');
+                      var group = layer.get('Group')[i];
+                      group.get('Rect')[0].setStroke('red');
+                      group.draggable(false);
+                      group.off("mouseover");
+                      group.off("mouseout");
+                      group.on('mouseover', function () {
+                        mouseIsInGroup = true;
+                      });
+                      group.on('mouseout', function () {
+                        mouseIsInGroup = false;
+                      });
                     }
                     this.stroke('yellow');
-                    layer.draw();
                     currentGroup = this.getParent();
                     currentGroup.moveToTop();
+                    document.body.style.cursor = 'move';
+                    mouseIsOnCurrentGroup = true;
+                    currentGroup.draggable(true);
+                    stage.removeEventListener("mousedown", mouseDown, false);
+                    currentGroup.on('mouseover', function () {
+                      console.log("Mouse is on current group");
+                      document.body.style.cursor = 'move';
+                      mouseIsOnCurrentGroup = true;
+                      this.draggable(true);
+                      stage.removeEventListener("mousedown", mouseDown, false);
+                    });
+                    currentGroup.on('mouseout', function () {
+                      console.log("Mouse is out of current group");
+                      document.body.style.cursor = 'default';
+                      mouseIsOnCurrentGroup = false;
+                      this.draggable(false);
+                      stage.addEventListener("mousedown", mouseDown, false);
+                    });
                     layer.draw();
                   }
                 }
@@ -272,8 +306,6 @@
       }
     }
   };
-  var startX, endX, startY, endY;
-  var mouseIsDown, mouseIsInGroup, mouseIsOnCircle;
 
   function mouseDown(eve) {
     if (!mouseIsOnCircle) {
@@ -281,7 +313,7 @@
       var pos = getMousePos(drawCanvas, eve);
       startX = endX = pos.x;
       startY = endY = pos.y;
-      drawSquare(); //update
+      drawSquare(eve); //update
     }
   }
 
@@ -290,7 +322,7 @@
       var pos = getMousePos(drawCanvas, eve);
       endX = pos.x;
       endY = pos.y;
-      drawSquare();
+      drawSquare(eve);
     }
   }
 
@@ -300,9 +332,9 @@
     endY = pos.y;
     var w = startX <= endX ? endX - startX : startX - endX;
     var h = startY <= endY ? endY - startY : startY - endY;
-    if (mouseIsDown && !mouseIsOnCircle) {
+    if (mouseIsDown) {
       mouseIsDown = false;
-      drawSquare(); //update on mouse-up
+      drawSquare(eve); //update on mouse-up
 
       if (w >= minRectSize || h >= minRectSize) {
         var rect = new Konva.Rect({
@@ -371,12 +403,37 @@
             var h1 = startY <= endY ? endY - startY : startY - endY;
             if (w1 < minRectSize && h1 < minRectSize) {
               for (var i = 0; i < layer.get('Group').length; i++) {
-                layer.get('Group')[i].get('Rect')[0].setStroke('red');
+                var group = layer.get('Group')[i];
+                group.get('Rect')[0].setStroke('red');
+                group.draggable(false);
+                group.off("mouseover");
+                group.off("mouseout");
+                group.on('mouseover', function () {
+                  mouseIsInGroup = true;
+                });
+                group.on('mouseout', function () {
+                  mouseIsInGroup = false;
+                });
               }
               this.stroke('yellow');
-              layer.draw();
               currentGroup = this.getParent();
               currentGroup.moveToTop();
+              document.body.style.cursor = 'move';
+              mouseIsOnCurrentGroup = true;
+              currentGroup.draggable(true);
+              stage.removeEventListener("mousedown", mouseDown, false);
+              currentGroup.on('mouseover', function () {
+                document.body.style.cursor = 'move';
+                mouseIsOnCurrentGroup = true;
+                this.draggable(true);
+                stage.removeEventListener("mousedown", mouseDown, false);
+              });
+              currentGroup.on('mouseout', function () {
+                document.body.style.cursor = 'default';
+                mouseIsOnCurrentGroup = false;
+                this.draggable(false);
+                stage.addEventListener("mousedown", mouseDown, false);
+              });
               layer.draw();
             }
           }
@@ -390,12 +447,34 @@
 
         //make drawing group as current group
         for (var i = 0; i < layer.get('Group').length; i++) {
-          layer.get('Group')[i].get('Rect')[0].setStroke('red');
+          var group = layer.get('Group')[i];
+          group.get('Rect')[0].setStroke('red');
+          group.draggable(false);
+          group.off("mouseover");
+          group.off("mouseout");
+          group.on('mouseover', function () {
+            mouseIsInGroup = true;
+          });
+          group.on('mouseout', function () {
+            mouseIsInGroup = false;
+          });
         }
         rectGroup.get('Rect')[0].setStroke('yellow');
         layer.draw();
         currentGroup = rectGroup;
         currentGroup.moveToTop();
+        currentGroup.on('mouseover', function () {
+          document.body.style.cursor = 'move';
+          mouseIsOnCurrentGroup = true;
+          this.draggable(true);
+          stage.removeEventListener("mousedown", mouseDown, false);
+        });
+        currentGroup.on('mouseout', function () {
+          document.body.style.cursor = 'default';
+          mouseIsOnCurrentGroup = false;
+          this.draggable(false);
+          stage.addEventListener("mousedown", mouseDown, false);
+        });
       }
 
       context.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
@@ -403,7 +482,21 @@
     }
   }
 
-  function drawSquare() {
+  function drawSquare(e) {
+    var pos = getMousePos(drawCanvas, e);
+    endX = pos.x;
+    endY = pos.y;
+    var minX = drawCanvas.getBoundingClientRect().left;
+    var maxX = drawCanvas.getBoundingClientRect().left + imgStageWidth;
+    var minY = drawCanvas.getBoundingClientRect().top;
+    var maxY = drawCanvas.getBoundingClientRect().top + imgStageHeight;
+//    console.log("maxX: ", maxX, " maxY: ", maxY);
+//    console.log("endX: ", endX, " endY: ", endY);
+    if (endX <= minX || endX >= maxX - 2 || endY <= minY || endY >= maxY - 1) {
+      mouseUp(e);
+      return;
+    }
+
     // creating a square
     var w = endX - startX;
     var h = endY - startY;
@@ -512,7 +605,7 @@
     var stage = group.getStage();
     var layer = group.getLayer();
     var minX = drawCanvas.getBoundingClientRect().left;
-    var maxX = drawCanvas.getBoundingClientRect().right + imgStageWidth;
+    var maxX = drawCanvas.getBoundingClientRect().left + imgStageWidth;
     var minY = drawCanvas.getBoundingClientRect().top;
     var maxY = drawCanvas.getBoundingClientRect().top + imgStageHeight;
     var anchor = new Konva.Circle({
@@ -843,7 +936,17 @@
       if (layer.get('Group').length > 0) {
         if (currentGroup) {
           for (let i = 0; i < layer.get('Group').length; i++) {
-            layer.get('Group')[i].get('Rect')[0].setStroke('red');
+            var group = layer.get('Group')[i];
+            group.get('Rect')[0].setStroke('red');
+            group.draggable(false);
+            group.off("mouseover");
+            group.off("mouseout");
+            group.on('mouseover', function () {
+              mouseIsInGroup = true;
+            });
+            group.on('mouseout', function () {
+              mouseIsInGroup = false;
+            });
           }
           let j = layer.get('Group').indexOf(currentGroup);
           if (j < layer.get('Group').length - 1) {
@@ -857,19 +960,40 @@
             layer.draw();
             currentGroup = nextGroup;
           }
-          currentGroup.moveToTop();
-          layer.draw();
         } else {
           for (let i = 0; i < layer.get('Group').length; i++) {
-            layer.get('Group')[i].get('Rect')[0].setStroke('red');
+            var group = layer.get('Group')[i];
+            group.get('Rect')[0].setStroke('red');
+            group.draggable(false);
+            group.off("mouseover");
+            group.off("mouseout");
+            group.on('mouseover', function () {
+              mouseIsInGroup = true;
+            });
+            group.on('mouseout', function () {
+              mouseIsInGroup = false;
+            });
           }
           let firstGroup = layer.get('Group')[0];
           firstGroup.get('Rect')[0].stroke('yellow');
           layer.draw();
           currentGroup = firstGroup;
-          currentGroup.moveToTop();
-          layer.draw();
         }
+
+        currentGroup.moveToTop();
+        currentGroup.on('mouseover', function () {
+          document.body.style.cursor = 'move';
+          mouseIsOnCurrentGroup = true;
+          this.draggable(true);
+          stage.removeEventListener("mousedown", mouseDown, false);
+        });
+        currentGroup.on('mouseout', function () {
+          document.body.style.cursor = 'default';
+          mouseIsOnCurrentGroup = false;
+          this.draggable(false);
+          stage.addEventListener("mousedown", mouseDown, false);
+        });
+        layer.draw();
 
       }
 
