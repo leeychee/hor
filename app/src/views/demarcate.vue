@@ -256,7 +256,10 @@
                   if (w1 < minRectSize && h1 < minRectSize) {
                     for (var i = 0; i < layer.get('Group').length; i++) {
                       var group = layer.get('Group')[i];
-                      group.get('Rect')[0].setStroke('red');
+                      var rect = group.get('Rect')[0];
+                      rect.setStroke('red');
+                      rect.off("mouseover");
+                      rect.off("mouseout");
                       group.draggable(false);
                       group.off("mouseover");
                       group.off("mouseout");
@@ -409,7 +412,10 @@
             if (w1 < minRectSize && h1 < minRectSize) {
               for (var i = 0; i < layer.get('Group').length; i++) {
                 var group = layer.get('Group')[i];
-                group.get('Rect')[0].setStroke('red');
+                var rect = group.get('Rect')[0];
+                rect.setStroke('red');
+                rect.off("mouseover");
+                rect.off("mouseout");
                 group.draggable(false);
                 group.off("mouseover");
                 group.off("mouseout");
@@ -457,7 +463,10 @@
         //make drawing group as current group
         for (var i = 0; i < layer.get('Group').length; i++) {
           var group = layer.get('Group')[i];
-          group.get('Rect')[0].setStroke('red');
+          var rect = group.get('Rect')[0];
+          rect.setStroke('red');
+          rect.off("mouseover");
+          rect.off("mouseout");
           group.draggable(false);
           group.off("mouseover");
           group.off("mouseout");
@@ -950,7 +959,10 @@
         if (currentGroup) {
           for (let i = 0; i < layer.get('Group').length; i++) {
             var group = layer.get('Group')[i];
-            group.get('Rect')[0].setStroke('red');
+            var rect = group.get('Rect')[0];
+            rect.setStroke('red');
+            rect.off("mouseover");
+            rect.off("mouseout");
             group.draggable(false);
             group.off("mouseover");
             group.off("mouseout");
@@ -976,7 +988,10 @@
         } else {
           for (let i = 0; i < layer.get('Group').length; i++) {
             var group = layer.get('Group')[i];
-            group.get('Rect')[0].setStroke('red');
+            var rect = group.get('Rect')[0];
+            rect.setStroke('red');
+            rect.off("mouseover");
+            rect.off("mouseout");
             group.draggable(false);
             group.off("mouseover");
             group.off("mouseout");
@@ -994,14 +1009,18 @@
         }
 
         currentGroup.moveToTop();
-        currentGroup.on('mouseover', function () {
+        currentGroup.get('Rect')[0].on('mouseover', function () {
           document.body.style.cursor = 'move';
+        });
+        currentGroup.get('Rect')[0].on('mouseout', function () {
+          document.body.style.cursor = 'default';
+        });
+        currentGroup.on('mouseover', function () {
           mouseIsOnCurrentGroup = true;
           this.draggable(true);
           stage.removeEventListener("mousedown", mouseDown, false);
         });
         currentGroup.on('mouseout', function () {
-          document.body.style.cursor = 'default';
           mouseIsOnCurrentGroup = false;
           this.draggable(false);
           stage.addEventListener("mousedown", mouseDown, false);
