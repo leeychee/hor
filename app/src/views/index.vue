@@ -130,7 +130,7 @@
           <div v-if="showRectSet" style="float: right;margin: 5px;">
             <h3 style="display: inline;">Min Rect Size(px)：</h3>
             <Select v-model="minSize" size="small" style="width:50px;" @on-change="changeMinSize">
-              <Option v-for="item in minList" :value="item.value" :key="item">{{ item.label }}</Option>
+              <Option v-for="item in minList" :value="item.value" :key="item.value">{{ item.label }}</Option>
             </Select>
           </div>
         </div>
