@@ -45,7 +45,9 @@
       imageIds = [],//图片id数组
       gIndex = -1,//游标
       minRectSize = 60,
-      opType;//demarcate:tag(default),review:review
+      opType,//demarcate:tag(default),review:review
+      chance,//color'variable middle transmit
+      setType = 'car';//set vehile type 
 
   var startX, endX, startY, endY;
   var mouseIsDown,
@@ -62,7 +64,7 @@
 //                aspectRatio : this.stageWidth/this.stageHeight,
       };
     },
-    props: ['minSize', 'type'],
+    props: ['minSize', 'preType', 'type'],
     created: function () {
       console.log("type:" + this.type);
       if (this.type == "r") {
@@ -74,6 +76,9 @@
     watch: {
       minSize: function (val) {
         minRectSize = val;
+      },
+      preType: function (val) {
+        setType = val;
       },
       '$route' (to, from) {
         // 对路由变化作出响应...
@@ -88,13 +93,13 @@
     },
     methods: {
       stageCanvas: function () {
-        stage = new Konva.Stage({
+        stage = new Konva.Stage({ //create a stage
           container: 'main',
           width: 22 / 24 * window.innerWidth,
           height: window.innerHeight - 40,
         });
         // add canvas element
-        layer = new Konva.Layer();
+        layer = new Konva.Layer(); //创建一个层
         stage.add(layer);
 
         imageObj = new Image();
@@ -189,11 +194,19 @@
               group.w = group.w / zoomRatio;
               group.h = group.h / zoomRatio;
               console.log("each group:", group);
+              if(group.type === "people"){ 
+                  chance = 'blue';
+                }else if(group.type === "bike"){
+                  chance = 'green';
+                }else{
+                  chance = 'red';
+                }
               var rect = new Konva.Rect({
                 width: group.w,
                 height: group.h,
-                stroke: 'red',
-                strokeWidth: 1
+                stroke: chance,//next or precious img show rect'color
+                strokeWidth: 1,
+                type: group.type   //disunderstand
               });
               rect.on('mouseover', function () {
                 document.body.style.cursor = 'default';
@@ -257,7 +270,13 @@
                     for (var i = 0; i < layer.get('Group').length; i++) {
                       var group = layer.get('Group')[i];
                       var rect = group.get('Rect')[0];
-                      rect.setStroke('red');
+                      if(rect.attrs.type === "people"){ 
+                        rect.setStroke('blue');
+                      }else if(rect.attrs.type === "bike"){
+                        rect.setStroke('green');
+                      }else{
+                        rect.setStroke('red');
+                      }
                       rect.off("mouseover");
                       rect.off("mouseout");
                       group.draggable(false);
@@ -343,13 +362,20 @@
     if (mouseIsDown) {
       mouseIsDown = false;
       drawSquare(eve); //update on mouse-up
-
       if (w >= minRectSize || h >= minRectSize) {
+        switch(setType){
+          case "people": chance = 'blue';
+          break;
+          case "bike": chance = 'green';
+          break;
+          default: chance = 'red';
+        }
         var rect = new Konva.Rect({
           width: w,
-          height: h,
-          stroke: 'red',
-          strokeWidth: 1
+          height: h, 
+          stroke: chance,
+          strokeWidth: 1,
+          type: setType
         });
         rect.on('mouseover', function () {
           document.body.style.cursor = 'default';
@@ -413,7 +439,13 @@
               for (var i = 0; i < layer.get('Group').length; i++) {
                 var group = layer.get('Group')[i];
                 var rect = group.get('Rect')[0];
-                rect.setStroke('red');
+                if(rect.attrs.type === "people"){ 
+                  rect.setStroke('blue');
+                }else if(rect.attrs.type === "bike"){
+                  rect.setStroke('green');
+                }else{
+                  rect.setStroke('red');
+                }
                 rect.off("mouseover");
                 rect.off("mouseout");
                 group.draggable(false);
@@ -464,7 +496,13 @@
         for (var i = 0; i < layer.get('Group').length; i++) {
           var group = layer.get('Group')[i];
           var rect = group.get('Rect')[0];
-          rect.setStroke('red');
+          if(rect.attrs.type === "people"){ 
+            rect.setStroke('blue');
+          }else if(rect.attrs.type === "bike"){
+            rect.setStroke('green');
+          }else{
+           rect.setStroke('red');
+          }
           rect.off("mouseover");
           rect.off("mouseout");
           group.draggable(false);
@@ -528,12 +566,18 @@
     var height = Math.abs(h);
 
     context.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-
     context.beginPath();
     context.rect(startX + offsetX, startY + offsetY, width, height);
     context.lineWidth = 1;
-    context.strokeStyle = 'red';
+    switch(setType){
+      case "people": context.strokeStyle = 'blue';
+      break;
+      case "bike": context.strokeStyle = 'green';
+      break;
+      default: context.strokeStyle = 'red';
+    }
 //        context.setLineDash([5,5]);
+
     context.stroke();
     layer.draw();
   }
@@ -854,13 +898,12 @@
         for (var i = 0; i < layer.get('Group').length; i++) {
           var group = layer.get('Group')[i];
           var rect = group.get('Rect')[0];
-
           tags.push({
             "x": Math.round(group.getX() * zoomRatio),
             "y": Math.round(group.getY() * zoomRatio),
             "w": Math.round(rect.width() * zoomRatio),
             "h": Math.round(rect.height() * zoomRatio),
-            "type": "car"
+            "type": rect.attrs.type  //commit img type
           });
         }
         console.log("tags:", tags);
@@ -919,13 +962,12 @@
         for (var i = 0; i < layer.get('Group').length; i++) {
           var group = layer.get('Group')[i];
           var rect = group.get('Rect')[0];
-
           tags.push({
             "x": Math.round(group.getX() * zoomRatio),
             "y": Math.round(group.getY() * zoomRatio),
             "w": Math.round(rect.width() * zoomRatio),
             "h": Math.round(rect.height() * zoomRatio),
-            "type": "car"
+            "type": rect.attrs.type
           });
         }
         console.log("tags:", tags);
@@ -960,7 +1002,13 @@
           for (let i = 0; i < layer.get('Group').length; i++) {
             var group = layer.get('Group')[i];
             var rect = group.get('Rect')[0];
-            rect.setStroke('red');
+            if(rect.attrs.type === "people"){ 
+                rect.setStroke('blue');
+              }else if(rect.attrs.type === "bike"){
+                rect.setStroke('green');
+              }else{
+                rect.setStroke('red');
+            }
             rect.off("mouseover");
             rect.off("mouseout");
             group.draggable(false);
@@ -989,7 +1037,13 @@
           for (let i = 0; i < layer.get('Group').length; i++) {
             var group = layer.get('Group')[i];
             var rect = group.get('Rect')[0];
-            rect.setStroke('red');
+            if(rect.attrs.type === "people"){ 
+                rect.setStroke('blue');
+              }else if(rect.attrs.type === "bike"){
+                rect.setStroke('green');
+              }else{
+                rect.setStroke('red');
+              }
             rect.off("mouseover");
             rect.off("mouseout");
             group.draggable(false);
