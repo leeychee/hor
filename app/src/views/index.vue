@@ -130,29 +130,35 @@
           <!--<h4 style="display: inline;margin-left: 30px;">Current Counts：{{currentCounts}}</h4>-->
           <div v-if="showRectSet" style="float: right;margin: 5px;">
             <h3 style="display: inline;">Min Rect Size(px)：</h3>
-            <Select v-model="minSize" size="small" style="width:80px;" @on-change="changeMinSize">
+            <Select v-model="minSize" size="small" style="width: 50px;" @on-change="changeMinSize">
               <Option v-for="item in minList" :value="item.value" :key="item.value">{{ item.label }}</Option>
             </Select>
           </div>
+          <div v-if="showSetUser" style="float: right;margin: 5px;">
+            <h3 style="display: inline;">User:</h3>
+            <Select v-model="userName" size="small" style="width: 60px;" @on-change="changeUserName">
+              <Option v-for="item in userList" :value="item.value" :key="item.value">{{ item.label}}</Option>
+            </Select>
+          </div>
           <div v-if="showSetType" style="float: right;margin: 5px;">
-            <Radio-group v-model="preType" size="large" style="width: 220px;" @on-change="changePreType">
+            <Radio-group v-model="preType" size="large" style="width: 210px;" @on-change="changePreType">
               <Radio label="car">
                 <Icon value="car" type="social-car" style="color:red"></Icon>
-                <span>汽车</span>
+                <span style="font-size: 1.17em;">汽车</span>
               </Radio>
               <Radio label="bike">
                 <Icon value="bike" type="social-bike" style="color:green"></Icon>
-                <span>自行车</span>
+                <span style="font-size: 1.17em;">自行车</span>
               </Radio>
               <Radio label="people">
                 <Icon value="people" type="social-people" style="color:blue"></Icon>
-                <span>行人</span>
+                <span style="font-size: 1.17em;">行人</span>
               </Radio>
             </Radio-group>
           </div>
         </div>
         <div class="layout-content">
-          <router-view :minSize.sync="minSize" :preType.sync="preType" :v-on:updateImgName="showImgName" :key="key"></router-view>
+          <router-view :minSize.sync="minSize" :userName.sync="userName" :preType.sync="preType" :v-on:updateImgName="showImgName" :key="key"></router-view>
         </div>
       </i-col>
     </Row>
@@ -207,10 +213,21 @@
             label: '60'
           }
         ],
-        preType: '',
+        userList: [
+          { 
+            value: 'sun',
+            label: 'sun'
+          },
+          {
+            value: 'wu',
+            label: 'wu'
+          }
+        ],
         minSize: '60',
+        userName: 'sun',
         preType: 'car',
         showRectSet: true,
+        showSetUser: true,
         showSetType: true,
         showCurrent: true,
         columnsTip: [
@@ -297,6 +314,7 @@
             this.imgName = "";
             this.currentCounts = 0;
             this.showRectSet = true;
+            this.showSetUser = true;
             this.showSetType = true;
             this.showCurrent = true;
             break;
@@ -307,6 +325,7 @@
             this.imgName = "";
             this.currentCounts = 0;
             this.showRectSet = true;
+            this.showSetUser = true;
             this.showSetType = true;
             this.showCurrent = true;
             break;
@@ -314,6 +333,7 @@
             this.$router.replace({name: 'export'});
             this.title = "Export";
             this.showRectSet = false;
+            this.showSetUser = true;
             this.showSetType = false;
             this.showCurrent = false;
             break;
@@ -322,6 +342,8 @@
       changeMinSize (val) {
       },
       changePreType (val){
+      },
+      changeUserName (val){
       },
       showImgName: function (imgName) {
         this.imgName = imgName;
@@ -332,6 +354,7 @@
       this.$router.replace({name: 'demarcate', params: {type: 'd'}});
       this.title = "Demarcate";
       this.showRectSet = true;
+      this.showSetUser = true;
       this.showSetType = true;
     }
   };
