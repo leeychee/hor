@@ -45,7 +45,11 @@
       imageIds = [],//图片id数组
       gIndex = -1,//游标
       minRectSize = 60,
-      opType;//demarcate:tag(default),review:review
+      opType,//demarcate:tag(default),review:review
+      chance,//color'variable middle transmit
+      setType ,//set vehile type 
+      setUser,//set user
+      chanceUser = 'sun';//judge whether chanceuser or not
 
   var startX, endX, startY, endY;
   var mouseIsDown,
@@ -62,7 +66,7 @@
 //                aspectRatio : this.stageWidth/this.stageHeight,
       };
     },
-    props: ['minSize', 'type'],
+    props: ['minSize', 'userName', 'preType', 'type'],
     created: function () {
       console.log("type:" + this.type);
       if (this.type == "r") {
@@ -74,6 +78,12 @@
     watch: {
       minSize: function (val) {
         minRectSize = val;
+      },
+      preType: function (val) {
+        setType = val;
+      },
+      userName: function (val) {
+        setUser = val;
       },
       '$route' (to, from) {
         // 对路由变化作出响应...
@@ -88,13 +98,13 @@
     },
     methods: {
       stageCanvas: function () {
-        stage = new Konva.Stage({
+        stage = new Konva.Stage({ //create a stage
           container: 'main',
           width: 22 / 24 * window.innerWidth,
           height: window.innerHeight - 40,
         });
         // add canvas element
-        layer = new Konva.Layer();
+        layer = new Konva.Layer(); //创建一个层
         stage.add(layer);
 
         imageObj = new Image();
@@ -120,6 +130,73 @@
 
         imageIds = [];
         gIndex = -1;
+        
+        if(chanceUser !== setUser){
+          var tags = [];
+          if (layer.get('Group').length > 0) {
+            for (var i = 0; i < layer.get('Group').length; i++) {
+            var group = layer.get('Group')[i];
+            var rect = group.get('Rect')[0];
+            tags.push({
+              "x": Math.round(group.getX() * zoomRatio),
+              "y": Math.round(group.getY() * zoomRatio),
+              "w": Math.round(rect.width() * zoomRatio),
+              "h": Math.round(rect.height() * zoomRatio),
+              "type": rect.attrs.type,  //commit img type
+              "user": setUser 
+            });
+            }
+            console.log("tags:", tags);
+          }
+          Vue.http.post("/image/" + currentImageId + "/_" + opType, {"objects": tags}).then(res => {
+          console.log("after tag: ", res.body);
+          let obj = res.body;
+          if (obj.status == "ok") {
+          }
+          if (imageIds[gIndex + 1]) {
+            Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
+              let o = res.body;
+              echoGroups = o.objects;
+              currentImageId = o.id;
+              gIndex++;
+              imageObj.src = "/f/" + o.path;
+              Bus.$emit('updateImgName', o.path);
+              console.log("/image/:id : ", res.body);
+            }, err => {
+              console.log("error /image/:id : ", err);
+            });
+          } else {
+            Vue.http.get("/images/_next", {params: {"type": opType}}).then(resp => {
+              console.log(resp.body);
+              let o = resp.body;
+              echoGroups = o.objects;
+              currentImageId = o.id;
+              Bus.$emit('updateCounts', imageIds.length);
+              imageIds.push(currentImageId);
+              gIndex = imageIds.length - 1;
+              console.log(imageIds);
+              imageObj.src = "/f/" + o.path;
+              Bus.$emit('updateImgName', o.path);
+            }, error => {
+              Bus.$emit('updateCounts', imageIds.length);
+              if (error.ok == false) {
+                switch (error.status) {
+                  case 404:
+                    iView.Message.warning("没有更多图片了！");
+                    break;
+                  default:
+                    iView.$Message.error("服务器好像出了点问题！");
+                    break;
+                }
+              }
+              console.log("image error: ", error);
+            });
+          }
+        }, err => {
+          console.log("tag error: ", err);
+        });
+          chanceUser = setUser;
+        }
 
         if (imageIds[gIndex + 1]) {
           Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
@@ -189,11 +266,20 @@
               group.w = group.w / zoomRatio;
               group.h = group.h / zoomRatio;
               console.log("each group:", group);
+              if(group.type === "people"){ 
+                  chance = 'blue';
+                }else if(group.type === "bike"){
+                  chance = 'green';
+                }else{
+                  chance = 'red';
+                }
               var rect = new Konva.Rect({
                 width: group.w,
                 height: group.h,
-                stroke: 'red',
-                strokeWidth: 1
+                stroke: chance,//next or precious img show rect'color
+                strokeWidth: 1,
+                type: group.type,   //disunderstand
+                user: group.user
               });
               rect.on('mouseover', function () {
                 document.body.style.cursor = 'default';
@@ -257,7 +343,13 @@
                     for (var i = 0; i < layer.get('Group').length; i++) {
                       var group = layer.get('Group')[i];
                       var rect = group.get('Rect')[0];
-                      rect.setStroke('red');
+                      if(rect.attrs.type === "people"){ 
+                        rect.setStroke('blue');
+                      }else if(rect.attrs.type === "bike"){
+                        rect.setStroke('green');
+                      }else{
+                        rect.setStroke('red');
+                      }
                       rect.off("mouseover");
                       rect.off("mouseout");
                       group.draggable(false);
@@ -343,13 +435,20 @@
     if (mouseIsDown) {
       mouseIsDown = false;
       drawSquare(eve); //update on mouse-up
-
       if (w >= minRectSize || h >= minRectSize) {
+        switch(setType){
+          case "people": chance = 'blue';
+          break;
+          case "bike": chance = 'green';
+          break;
+          default: chance = 'red';
+        }
         var rect = new Konva.Rect({
           width: w,
-          height: h,
-          stroke: 'red',
-          strokeWidth: 1
+          height: h, 
+          stroke: chance,
+          strokeWidth: 1,
+          type: setType
         });
         rect.on('mouseover', function () {
           document.body.style.cursor = 'default';
@@ -413,7 +512,13 @@
               for (var i = 0; i < layer.get('Group').length; i++) {
                 var group = layer.get('Group')[i];
                 var rect = group.get('Rect')[0];
-                rect.setStroke('red');
+                if(rect.attrs.type === "people"){ 
+                  rect.setStroke('blue');
+                }else if(rect.attrs.type === "bike"){
+                  rect.setStroke('green');
+                }else{
+                  rect.setStroke('red');
+                }
                 rect.off("mouseover");
                 rect.off("mouseout");
                 group.draggable(false);
@@ -464,7 +569,13 @@
         for (var i = 0; i < layer.get('Group').length; i++) {
           var group = layer.get('Group')[i];
           var rect = group.get('Rect')[0];
-          rect.setStroke('red');
+          if(rect.attrs.type === "people"){ 
+            rect.setStroke('blue');
+          }else if(rect.attrs.type === "bike"){
+            rect.setStroke('green');
+          }else{
+           rect.setStroke('red');
+          }
           rect.off("mouseover");
           rect.off("mouseout");
           group.draggable(false);
@@ -528,12 +639,18 @@
     var height = Math.abs(h);
 
     context.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-
     context.beginPath();
     context.rect(startX + offsetX, startY + offsetY, width, height);
     context.lineWidth = 1;
-    context.strokeStyle = 'red';
+    switch(setType){
+      case "people": context.strokeStyle = 'blue';
+      break;
+      case "bike": context.strokeStyle = 'green';
+      break;
+      default: context.strokeStyle = 'red';
+    }
 //        context.setLineDash([5,5]);
+
     context.stroke();
     layer.draw();
   }
@@ -854,13 +971,13 @@
         for (var i = 0; i < layer.get('Group').length; i++) {
           var group = layer.get('Group')[i];
           var rect = group.get('Rect')[0];
-
           tags.push({
             "x": Math.round(group.getX() * zoomRatio),
             "y": Math.round(group.getY() * zoomRatio),
             "w": Math.round(rect.width() * zoomRatio),
             "h": Math.round(rect.height() * zoomRatio),
-            "type": "car"
+            "type": rect.attrs.type,  //commit img type
+            "user": setUser 
           });
         }
         console.log("tags:", tags);
@@ -919,13 +1036,12 @@
         for (var i = 0; i < layer.get('Group').length; i++) {
           var group = layer.get('Group')[i];
           var rect = group.get('Rect')[0];
-
           tags.push({
             "x": Math.round(group.getX() * zoomRatio),
             "y": Math.round(group.getY() * zoomRatio),
             "w": Math.round(rect.width() * zoomRatio),
             "h": Math.round(rect.height() * zoomRatio),
-            "type": "car"
+            "type": rect.attrs.type
           });
         }
         console.log("tags:", tags);
@@ -960,7 +1076,13 @@
           for (let i = 0; i < layer.get('Group').length; i++) {
             var group = layer.get('Group')[i];
             var rect = group.get('Rect')[0];
-            rect.setStroke('red');
+            if(rect.attrs.type === "people"){ 
+                rect.setStroke('blue');
+              }else if(rect.attrs.type === "bike"){
+                rect.setStroke('green');
+              }else{
+                rect.setStroke('red');
+            }
             rect.off("mouseover");
             rect.off("mouseout");
             group.draggable(false);
@@ -989,7 +1111,13 @@
           for (let i = 0; i < layer.get('Group').length; i++) {
             var group = layer.get('Group')[i];
             var rect = group.get('Rect')[0];
-            rect.setStroke('red');
+            if(rect.attrs.type === "people"){ 
+                rect.setStroke('blue');
+              }else if(rect.attrs.type === "bike"){
+                rect.setStroke('green');
+              }else{
+                rect.setStroke('red');
+              }
             rect.off("mouseover");
             rect.off("mouseout");
             group.draggable(false);

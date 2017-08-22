@@ -15,6 +15,9 @@
       </Card>
       </Col>
     </Row>
+    <div style="margin-top: 20px;">
+      <Table border :columns = "columns1" :data = "data1"></Table>
+    </div>
     <div style="text-align: center;">
       <Button type="info" size="large" style="margin: 20px;">导出xml</Button>
     </div>
@@ -24,10 +27,36 @@
   export default {
     data() {
       return {
+        columns1: [
+          {
+            title: 'User',
+            key: 'user'   
+          },
+          {
+            title: 'Identified',
+            key: 'Identified'
+          },
+          {
+            title: 'Reviewed',
+            key: 'Reviewed'
+          }
+        ],
+        data1: [
+          {
+            user: 'sun',
+            Identified: '0',
+            Reviewed: '0'
+          },
+          {
+            user: 'wu',
+            Identified: '0',
+            Reviewed: '0'
+          }
+        ],
         showError: false,
         all: 0,
         identified: 0,
-        reviewed: 0
+        reviewed: 0,
       };
     },
     mounted() {
