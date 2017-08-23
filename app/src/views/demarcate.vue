@@ -47,9 +47,8 @@
       minRectSize = 60,
       opType,//demarcate:tag(default),review:review
       chance,//color'variable middle transmit
-      setType ,//set vehile type 
-      setUser,//set user
-      chanceUser = 'sun';//judge whether chanceuser or not
+      setType = 'car',//set vehile type 
+      setUser = 'sun'//set user
 
   var startX, endX, startY, endY;
   var mouseIsDown,
@@ -130,73 +129,6 @@
 
         imageIds = [];
         gIndex = -1;
-        
-        if(chanceUser !== setUser){
-          var tags = [];
-          if (layer.get('Group').length > 0) {
-            for (var i = 0; i < layer.get('Group').length; i++) {
-            var group = layer.get('Group')[i];
-            var rect = group.get('Rect')[0];
-            tags.push({
-              "x": Math.round(group.getX() * zoomRatio),
-              "y": Math.round(group.getY() * zoomRatio),
-              "w": Math.round(rect.width() * zoomRatio),
-              "h": Math.round(rect.height() * zoomRatio),
-              "type": rect.attrs.type,  //commit img type
-              "user": setUser 
-            });
-            }
-            console.log("tags:", tags);
-          }
-          Vue.http.post("/image/" + currentImageId + "/_" + opType, {"objects": tags}).then(res => {
-          console.log("after tag: ", res.body);
-          let obj = res.body;
-          if (obj.status == "ok") {
-          }
-          if (imageIds[gIndex + 1]) {
-            Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
-              let o = res.body;
-              echoGroups = o.objects;
-              currentImageId = o.id;
-              gIndex++;
-              imageObj.src = "/f/" + o.path;
-              Bus.$emit('updateImgName', o.path);
-              console.log("/image/:id : ", res.body);
-            }, err => {
-              console.log("error /image/:id : ", err);
-            });
-          } else {
-            Vue.http.get("/images/_next", {params: {"type": opType}}).then(resp => {
-              console.log(resp.body);
-              let o = resp.body;
-              echoGroups = o.objects;
-              currentImageId = o.id;
-              Bus.$emit('updateCounts', imageIds.length);
-              imageIds.push(currentImageId);
-              gIndex = imageIds.length - 1;
-              console.log(imageIds);
-              imageObj.src = "/f/" + o.path;
-              Bus.$emit('updateImgName', o.path);
-            }, error => {
-              Bus.$emit('updateCounts', imageIds.length);
-              if (error.ok == false) {
-                switch (error.status) {
-                  case 404:
-                    iView.Message.warning("没有更多图片了！");
-                    break;
-                  default:
-                    iView.$Message.error("服务器好像出了点问题！");
-                    break;
-                }
-              }
-              console.log("image error: ", error);
-            });
-          }
-        }, err => {
-          console.log("tag error: ", err);
-        });
-          chanceUser = setUser;
-        }
 
         if (imageIds[gIndex + 1]) {
           Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
@@ -206,6 +138,7 @@
             gIndex++;
             imageObj.src = "/f/" + o.path;
             this.$emit('updateImgName', o.path);
+            this.$emit('updateUser', o.demname);
             console.log("/image/:id : ", res.body);
           }, err => {
             console.log("error /image/:id : ", err);
@@ -221,6 +154,7 @@
             console.log(imageIds);
             imageObj.src = "/f/" + o.path;
             this.$emit('updateImgName', o.path);
+            this.$emit('updateUser', o.demname);
           }, error => {
             if (error.ok == false) {
               switch (error.status) {
@@ -278,7 +212,7 @@
                 height: group.h,
                 stroke: chance,//next or precious img show rect'color
                 strokeWidth: 1,
-                type: group.type,   //disunderstand
+                type: group.type,   
                 user: group.user
               });
               rect.on('mouseover', function () {
@@ -448,7 +382,8 @@
           height: h, 
           stroke: chance,
           strokeWidth: 1,
-          type: setType
+          type: setType,
+          user: setUser
         });
         rect.on('mouseover', function () {
           document.body.style.cursor = 'default';
@@ -977,7 +912,7 @@
             "w": Math.round(rect.width() * zoomRatio),
             "h": Math.round(rect.height() * zoomRatio),
             "type": rect.attrs.type,  //commit img type
-            "user": setUser 
+            "user": setUser
           });
         }
         console.log("tags:", tags);
@@ -995,6 +930,7 @@
             gIndex++;
             imageObj.src = "/f/" + o.path;
             Bus.$emit('updateImgName', o.path);
+            Bus.$emit('updateUser', o.demname);
             console.log("/image/:id : ", res.body);
           }, err => {
             console.log("error /image/:id : ", err);
@@ -1011,6 +947,7 @@
             console.log(imageIds);
             imageObj.src = "/f/" + o.path;
             Bus.$emit('updateImgName', o.path);
+            Bus.$emit('updateUser', o.demname);
           }, error => {
             Bus.$emit('updateCounts', imageIds.length);
             if (error.ok == false) {
@@ -1041,7 +978,8 @@
             "y": Math.round(group.getY() * zoomRatio),
             "w": Math.round(rect.width() * zoomRatio),
             "h": Math.round(rect.height() * zoomRatio),
-            "type": rect.attrs.type
+            "type": rect.attrs.type,
+            "user": setUser
           });
         }
         console.log("tags:", tags);
@@ -1059,6 +997,7 @@
             gIndex--;
             imageObj.src = "/f/" + o.path;
             Bus.$emit('updateImgName', o.path);
+            Bus.$emit('updateUser', o.demname);
             console.log("/image/:id : ", res.body);
           }, err => {
             console.log("error /image/:id : ", err);
