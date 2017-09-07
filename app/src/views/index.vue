@@ -120,25 +120,58 @@
       </i-col>
       <i-col :span="spanMiddle">
         <div v-if="showHeader" class="layout-header">
-          <h1 style="display: inline;position: absolute;margin-left: 10px;">{{title}}</h1>
-          <div v-if="showRectSet" style="float: right;margin: 5px;">
-            <h3 style="display: inline;">最小选框尺寸(px)：</h3>
-            <Select v-model="minSize" size="small" style="width:50px;" @on-change="changeMinSize">
-              <Option v-for="item in minList" :value="item.value" :key="item">{{ item.label }}</Option>
+          
+
+          <Tag v-if="showUser" style="margin-left: 10px;" type="dot" color="blue"><b>Ide-User: {{user}}</b>
+          </Tag>
+
+          <Tag v-if="showCurrent" style="margin-left: 10px;" type="dot" color="blue"><b>Current Image: {{imgName}}</b>
+          </Tag>
+          <!--<h4 style="display: inline;margin-left: 30px;">{{imgName}}</h4>-->
+          <Tag v-if="showCurrent" style="margin-left: 10px;" type="dot" color="blue"><b>Current
+            Counts：{{currentCounts}}</b>
+          </Tag>
+          <!--<h4 style="display: inline;margin-left: 30px;">Current Counts：{{currentCounts}}</h4>-->
+          <div v-if="showRectSet" style="float: right;margin: 2px;">
+            <h3 style="display: inline;">Min Rect Size(px)：</h3>
+            <Select v-model="minSize" size="small" style="width: 50px;" @on-change="changeMinSize">
+              <Option v-for="item in minList" :value="item.value" :key="item.value">{{ item.label }}</Option>
             </Select>
+          </div>
+          <div v-if="showSetUser" style="float: right;margin: 2px;">
+            <h3 style="display: inline;">{{User}}:</h3>
+            <Select v-model="userName" size="small" style="width: 60px;" @on-change="changeUserName">
+              <Option v-for="item in userList" :value="item.value" :key="item.value">{{ item.label}}</Option>
+            </Select>
+          </div>
+          <div v-if="showSetType" style="float: right;margin: 2px;">
+            <Radio-group v-model="preType" size="large" style="width: 210px;" @on-change="changePreType">
+              <Radio label="car">
+                <Icon value="car" type="social-car" style="color:red"></Icon>
+                <span style="font-size: 1.17em;">汽车</span>
+              </Radio>
+              <Radio label="bike">
+                <Icon value="bike" type="social-bike" style="color:#28FF28"></Icon>
+                <span style="font-size: 1.17em;">自行车</span>
+              </Radio>
+              <Radio label="people">
+                <Icon value="people" type="social-people" style="color:blue"></Icon>
+                <span style="font-size: 1.17em;">行人</span>
+              </Radio>
+            </Radio-group>
           </div>
         </div>
         <div class="layout-content">
-          <router-view :minSize.sync="minSize" :key="key"></router-view>
+          <router-view :minSize.sync="minSize" :userName.sync="userName" :preType.sync="preType" :v-on:updateImgName="showImgName" :v-on:updateUser="showUserName" :key="key"></router-view>
         </div>
       </i-col>
     </Row>
     <div class="operate-tip">
-      <Poptip trigger="hover" placement="right-end" >
+      <Poptip trigger="hover" placement="right-end">
         <Icon type="compass" size="24" color="#aaa"></Icon>
         <div slot="title"><h3>操作快捷键</h3></div>
         <div slot="content">
-          <Table :columns="columnsTip" :data="dataTip" ></Table>
+          <Table :columns="columnsTip" :data="dataTip"></Table>
         </div>
       </Poptip>
     </div>
@@ -147,10 +180,12 @@
 <script>
   import logoUrl from '../static/img/hor.svg'
   import demarcate from './demarcate.vue'
+  import review from './review.vue'
+  import Bus from '../libs/bus';
   export default {
     data () {
       return {
-        title: "HOR",
+        //title: "",
         logoSVG: logoUrl,
         showHeader: true,
         spanLeft: 2,
@@ -182,8 +217,29 @@
             label: '60'
           }
         ],
+        userList: [
+          { 
+            value: 'sun',
+            label: 'sun'
+          },
+          {
+            value: 'wu',
+            label: 'wu'
+          },
+          {
+            value: 'li',
+            label: 'li'
+          }
+        ],
         minSize: '60',
+        userName: 'sun',
+        preType: 'car',
+        User: 'Ide-User',
+        showUser: false,
         showRectSet: true,
+        showSetUser: true,
+        showSetType: true,
+        showCurrent: true,
         columnsTip: [
           {
             title: '按键',
@@ -226,7 +282,10 @@
             key: '↑→←↓',
             value: '移动选中选框'
           }
-        ]
+        ],
+        imgName: '',
+        currentCounts: 0,
+        user: ''
       };
     },
     computed: {
@@ -236,6 +295,17 @@
       key() {
         return this.$route.name !== undefined ? this.$route.name + new Date() : this.$route + new Date()
       }
+    },
+    created: function () {
+      Bus.$on("updateImgName", imgName => {
+        this.imgName = imgName;
+      });
+      Bus.$on("updateCounts", count => {
+        this.currentCounts = count;
+      });
+      Bus.$on("updateUser", user => {
+        this.user = user;
+      });
     },
     methods: {
       toggleLeftClick () {
@@ -254,30 +324,63 @@
           case "1":
 //                        this.$router.replace('demarcate');
             this.$router.replace({name: 'demarcate', params: {type: 'd'}});
-            this.title = "Demarcate";
+            //this.title = "Demarcate";
+            this.imgName = "";
+            this.currentCounts = 0;
+            this.showUser = false;
+            this.User = "Ide-User";
             this.showRectSet = true;
+            this.showSetUser = true;
+            this.showSetType = true;
+            this.showCurrent = true;
             break;
           case "2":
 //                        this.$router.replace('review');
             this.$router.replace({name: 'demarcate', params: {type: 'r'}});
-            this.title = "Review";
-            this.showRectSet = false;
+            //this.title = "Review";
+            this.user = "",
+            this.imgName = "";
+            this.showUser = true;
+            this.User = "Rev-User";
+            this.currentCounts = 0;
+            this.showRectSet = true;
+            this.showSetUser = true;
+            this.showSetType = true;
+            this.showCurrent = true;
+            
             break;
           case "3":
             this.$router.replace({name: 'export'});
-            this.title = "Export";
+            //this.title = "Export";
             this.showRectSet = false;
+            this.showSetUser = false;
+            this.showSetType = false;
+            this.showCurrent = false;
+            this.showUser = false;
             break;
         }
       },
       changeMinSize (val) {
-      }
+      },
+      changePreType (val){
+      },
+      changeUserName (val){
+      },
+      showImgName: function (imgName) {
+        this.imgName = imgName;
+      },
+      showUserName: function (demname) {
+        this.user = demname;
+      },
     },
     mounted: function () {
 //            this.$router.replace('demarcate');
       this.$router.replace({name: 'demarcate', params: {type: 'd'}});
-      this.title = "Demarcate";
+      //this.title = "Demarcate";
       this.showRectSet = true;
+      this.showSetUser = true;
+      this.showSetType = true;
+      this.showUser = false;
     }
   };
 </script>
