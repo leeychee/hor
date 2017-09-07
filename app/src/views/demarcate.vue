@@ -25,7 +25,11 @@
   import Konva from 'konva';
   import Vue from 'vue'
   import VueResource from 'vue-resource'
+  import iView from 'iview';
+  import Bus from '../libs/bus';
   Vue.use(VueResource);
+  Vue.use(iView);
+
   var stage,
       layer,
       drawCanvas,
@@ -41,7 +45,20 @@
       imageIds = [],//图片id数组
       gIndex = -1,//游标
       minRectSize = 60,
-      opType;//demarcate:tag(default),review:review
+      opType,//demarcate:tag(default),review:review
+      chance,//color'variable middle transmit
+      setType = 'car',//set vehile type 
+      setUser = 'sun',//set user
+      qualified = 1,
+      flag = 1,
+      temCount = 0,  //temporary count of temporary area
+      tem = []
+
+  var startX, endX, startY, endY;
+  var mouseIsDown,
+      mouseIsInGroup,
+      mouseIsOnCircle,
+      mouseIsOnCurrentGroup;
 
   var demarcate = {
     name: 'demarcate',
@@ -52,7 +69,7 @@
 //                aspectRatio : this.stageWidth/this.stageHeight,
       };
     },
-    props: ['minSize','type'],
+    props: ['minSize', 'userName', 'preType', 'type'],
     created: function () {
       console.log("type:" + this.type);
       if (this.type == "r") {
@@ -64,6 +81,12 @@
     watch: {
       minSize: function (val) {
         minRectSize = val;
+      },
+      preType: function (val) {
+        setType = val;
+      },
+      userName: function (val) {
+        setUser = val;
       },
       '$route' (to, from) {
         // 对路由变化作出响应...
@@ -78,13 +101,13 @@
     },
     methods: {
       stageCanvas: function () {
-        stage = new Konva.Stage({
+        stage = new Konva.Stage({ //create a stage
           container: 'main',
           width: 22 / 24 * window.innerWidth,
           height: window.innerHeight - 40,
         });
         // add canvas element
-        layer = new Konva.Layer();
+        layer = new Konva.Layer(); //创建一个层
         stage.add(layer);
 
         imageObj = new Image();
@@ -110,20 +133,20 @@
 
         imageIds = [];
         gIndex = -1;
-
         if (imageIds[gIndex + 1]) {
           Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
             let o = res.body;
             echoGroups = o.objects;
             currentImageId = o.id;
             gIndex++;
-            imageObj.src = "/f/P_" + o.path;
+            imageObj.src = "/f/" + o.path;
+            this.$emit('updateImgName', o.path);
+            this.$emit('updateUser', o.demname);
             console.log("/image/:id : ", res.body);
           }, err => {
-            console.log("error /image/:id : ", err);
-          });
+            console.log("error /image/:id : ", err);            });
         } else {
-          Vue.http.get("/images/_next", {params:{"type": opType}}).then(resp => {
+          Vue.http.get("/images/_next", {params: {"type": opType}}).then(resp => {
             console.log(resp.body);
             let o = resp.body;
             echoGroups = o.objects;
@@ -131,20 +154,32 @@
             imageIds.push(currentImageId);
             gIndex = imageIds.length - 1;
             console.log(imageIds);
-            imageObj.src = "/f/P_" + o.path;
+            imageObj.src = "/f/" + o.path;
+            this.$emit('updateImgName', o.path);
+            this.$emit('updateUser', o.demname);
+            Bus.$emit('updateImgName', o.path);
+            Bus.$emit('updateUser', o.demname);
+            tem[temCount] = o.path;
+            temCount++;
+
           }, error => {
             if (error.ok == false) {
               switch (error.status) {
                 case 404:
                   this.$Message.warning("没有更多图片了");
                   break;
+                default:
+                  this.$Message.error("服务器好像出了点问题！");
+                  break;
               }
             }
             console.log("image error: ", error);
           });
         }
-//                imageObj.src = 'http://www.bz55.com/uploads/allimg/150306/139-1503061IR6.jpg';
+        
         imageObj.onload = function () {
+          stage.removeEventListener("mousedown", mouseDown, false);
+          stage.addEventListener("mousedown", mouseDown, false);
           aspectRatio = stage.width() / stage.height();
           imgStageWidth = imageObj.width / imageObj.height >= aspectRatio ? stage.width() : imageObj.width / imageObj.height * stage.height();
           imgStageHeight = imageObj.width / imageObj.height >= aspectRatio ? imageObj.height / imageObj.width * stage.width() : stage.height();
@@ -173,11 +208,20 @@
               group.w = group.w / zoomRatio;
               group.h = group.h / zoomRatio;
               console.log("each group:", group);
+              if(group.type === "people"){ 
+                  chance = 'blue';
+                }else if(group.type === "bike"){
+                  chance = '#28FF28';
+                }else{
+                  chance = 'red';
+                }
               var rect = new Konva.Rect({
                 width: group.w,
                 height: group.h,
-                stroke: 'red',
-                strokeWidth: 1
+                stroke: chance,//next or precious img show rect'color
+                strokeWidth: 2,
+                type: group.type,   
+                user: group.user
               });
               rect.on('mouseover', function () {
                 document.body.style.cursor = 'default';
@@ -213,7 +257,7 @@
                 }
               });
               rectGroup.on('dragmove', function () {
-                //                console.log("x:" + this.getX(), "y:" + this.getY());
+//                console.log("x:" + this.getX(), "y:" + this.getY());
                 console.log("originX:", Math.round(this.getX() * zoomRatio), "originY:", Math.round(this.getY() * zoomRatio));
               });
               rectGroup.on('mouseover', function () {
@@ -239,11 +283,53 @@
                   var h1 = startY <= endY ? endY - startY : startY - endY;
                   if (w1 < minRectSize && h1 < minRectSize) {
                     for (var i = 0; i < layer.get('Group').length; i++) {
-                      layer.get('Group')[i].get('Rect')[0].setStroke('red');
+                      var group = layer.get('Group')[i];
+                      var rect = group.get('Rect')[0];
+                      if(rect.attrs.type === "people"){ 
+                        rect.setStroke('blue');
+                      }else if(rect.attrs.type === "bike"){
+                        rect.setStroke('#28FF28');
+                      }else{
+                        rect.setStroke('red');
+                      }
+                      rect.off("mouseover");
+                      rect.off("mouseout");
+                      group.draggable(false);
+                      group.off("mouseover");
+                      group.off("mouseout");
+                      group.on('mouseover', function () {
+                        mouseIsInGroup = true;
+                      });
+                      group.on('mouseout', function () {
+                        mouseIsInGroup = false;
+                      });
                     }
                     this.stroke('yellow');
-                    layer.draw();
+                    this.on('mouseover', function () {
+                      document.body.style.cursor = 'move';
+                    });
+                    this.on('mouseout', function () {
+                      document.body.style.cursor = 'default';
+                    });
                     currentGroup = this.getParent();
+                    currentGroup.moveToTop();
+                    document.body.style.cursor = 'move';
+                    mouseIsOnCurrentGroup = true;
+                    currentGroup.draggable(true);
+                    stage.removeEventListener("mousedown", mouseDown, false);
+                    currentGroup.on('mouseover', function () {
+                      console.log("Mouse is on current group");
+                      mouseIsOnCurrentGroup = true;
+                      this.draggable(true);
+                      stage.removeEventListener("mousedown", mouseDown, false);
+                    });
+                    currentGroup.on('mouseout', function () {
+                      console.log("Mouse is out of current group");
+                      mouseIsOnCurrentGroup = false;
+                      this.draggable(false);
+                      stage.addEventListener("mousedown", mouseDown, false);
+                    });
+                    layer.draw();
                   }
                 }
               });
@@ -262,8 +348,6 @@
       }
     }
   };
-  var startX, endX, startY, endY;
-  var mouseIsDown, mouseIsInGroup, mouseIsOnCircle;
 
   function mouseDown(eve) {
     if (!mouseIsOnCircle) {
@@ -271,7 +355,7 @@
       var pos = getMousePos(drawCanvas, eve);
       startX = endX = pos.x;
       startY = endY = pos.y;
-      drawSquare(); //update
+      drawSquare(eve); //update
     }
   }
 
@@ -280,7 +364,7 @@
       var pos = getMousePos(drawCanvas, eve);
       endX = pos.x;
       endY = pos.y;
-      drawSquare();
+      drawSquare(eve);
     }
   }
 
@@ -290,16 +374,24 @@
     endY = pos.y;
     var w = startX <= endX ? endX - startX : startX - endX;
     var h = startY <= endY ? endY - startY : startY - endY;
-    if (mouseIsDown && !mouseIsOnCircle) {
+    if (mouseIsDown) {
       mouseIsDown = false;
-      drawSquare(); //update on mouse-up
-
+      drawSquare(eve); //update on mouse-up
       if (w >= minRectSize || h >= minRectSize) {
+        switch(setType){
+          case "people": chance = 'blue';
+          break;
+          case "bike": chance = '#28FF28';
+          break;
+          default: chance = 'red';
+        }
         var rect = new Konva.Rect({
           width: w,
-          height: h,
-          stroke: 'red',
-          strokeWidth: 1
+          height: h, 
+          stroke: chance,
+          strokeWidth: 2,
+          type: setType,
+          user: setUser
         });
         rect.on('mouseover', function () {
           document.body.style.cursor = 'default';
@@ -335,7 +427,7 @@
           }
         });
         rectGroup.on('dragmove', function () {
-          //                console.log("x:" + this.getX(), "y:" + this.getY());
+//          console.log("x:" + this.getX(), "y:" + this.getY());
           console.log("originX:", Math.round(this.getX() * zoomRatio), "originY:", Math.round(this.getY() * zoomRatio));
         });
         rectGroup.on('mouseover', function () {
@@ -361,11 +453,51 @@
             var h1 = startY <= endY ? endY - startY : startY - endY;
             if (w1 < minRectSize && h1 < minRectSize) {
               for (var i = 0; i < layer.get('Group').length; i++) {
-                layer.get('Group')[i].get('Rect')[0].setStroke('red');
+                var group = layer.get('Group')[i];
+                var rect = group.get('Rect')[0];
+                if(rect.attrs.type === "people"){ 
+                  rect.setStroke('blue');
+                }else if(rect.attrs.type === "bike"){
+                  rect.setStroke('#28FF28');
+                }else{
+                  rect.setStroke('red');
+                }
+                rect.off("mouseover");
+                rect.off("mouseout");
+                group.draggable(false);
+                group.off("mouseover");
+                group.off("mouseout");
+                group.on('mouseover', function () {
+                  mouseIsInGroup = true;
+                });
+                group.on('mouseout', function () {
+                  mouseIsInGroup = false;
+                });
               }
               this.stroke('yellow');
-              layer.draw();
+              this.on('mouseover', function () {
+                document.body.style.cursor = 'move';
+              });
+              this.on('mouseout', function () {
+                document.body.style.cursor = 'default';
+              });
               currentGroup = this.getParent();
+              currentGroup.moveToTop();
+              document.body.style.cursor = 'move';
+              mouseIsOnCurrentGroup = true;
+              currentGroup.draggable(true);
+              stage.removeEventListener("mousedown", mouseDown, false);
+              currentGroup.on('mouseover', function () {
+                mouseIsOnCurrentGroup = true;
+                this.draggable(true);
+                stage.removeEventListener("mousedown", mouseDown, false);
+              });
+              currentGroup.on('mouseout', function () {
+                mouseIsOnCurrentGroup = false;
+                this.draggable(false);
+                stage.addEventListener("mousedown", mouseDown, false);
+              });
+              layer.draw();
             }
           }
         });
@@ -375,6 +507,50 @@
         addAnchor(rectGroup, w, 0, 'topRight');
         addAnchor(rectGroup, 0, h, 'bottomLeft');
         addAnchor(rectGroup, w, h, 'bottomRight');
+
+        //make drawing group as current group
+        for (var i = 0; i < layer.get('Group').length; i++) {
+          var group = layer.get('Group')[i];
+          var rect = group.get('Rect')[0];
+          if(rect.attrs.type === "people"){ 
+            rect.setStroke('blue');
+          }else if(rect.attrs.type === "bike"){
+            rect.setStroke('#28FF28');
+          }else{
+           rect.setStroke('red');
+          }
+          rect.off("mouseover");
+          rect.off("mouseout");
+          group.draggable(false);
+          group.off("mouseover");
+          group.off("mouseout");
+          group.on('mouseover', function () {
+            mouseIsInGroup = true;
+          });
+          group.on('mouseout', function () {
+            mouseIsInGroup = false;
+          });
+        }
+        rectGroup.get('Rect')[0].setStroke('yellow');
+        layer.draw();
+        currentGroup = rectGroup;
+        currentGroup.moveToTop();
+        currentGroup.get('Rect')[0].on('mouseover', function () {
+          document.body.style.cursor = 'move';
+        });
+        currentGroup.get('Rect')[0].on('mouseout', function () {
+          document.body.style.cursor = 'default';
+        });
+        currentGroup.on('mouseover', function () {
+          mouseIsOnCurrentGroup = true;
+          this.draggable(true);
+          stage.removeEventListener("mousedown", mouseDown, false);
+        });
+        currentGroup.on('mouseout', function () {
+          mouseIsOnCurrentGroup = false;
+          this.draggable(false);
+          stage.addEventListener("mousedown", mouseDown, false);
+        });
       }
 
       context.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
@@ -382,7 +558,21 @@
     }
   }
 
-  function drawSquare() {
+  function drawSquare(e) {
+    var pos = getMousePos(drawCanvas, e);
+    endX = pos.x;
+    endY = pos.y;
+    var minX = drawCanvas.getBoundingClientRect().left;
+    var maxX = drawCanvas.getBoundingClientRect().left + imgStageWidth;
+    var minY = drawCanvas.getBoundingClientRect().top;
+    var maxY = drawCanvas.getBoundingClientRect().top + imgStageHeight;
+//    console.log("maxX: ", maxX, " maxY: ", maxY);
+//    console.log("endX: ", endX, " endY: ", endY);
+    if (endX <= minX || endX >= maxX - 2 || endY <= minY || endY >= maxY - 1) {
+      mouseUp(e);
+      return;
+    }
+
     // creating a square
     var w = endX - startX;
     var h = endY - startY;
@@ -392,12 +582,18 @@
     var height = Math.abs(h);
 
     context.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-
     context.beginPath();
     context.rect(startX + offsetX, startY + offsetY, width, height);
     context.lineWidth = 1;
-    context.strokeStyle = 'red';
+    switch(setType){
+      case "people": context.strokeStyle = 'blue';
+      break;
+      case "bike": context.strokeStyle = '#28FF28';
+      break;
+      default: context.strokeStyle = 'red';
+    }
 //        context.setLineDash([5,5]);
+
     context.stroke();
     layer.draw();
   }
@@ -419,7 +615,6 @@
     var rect = group.get('Rect')[0];
     var anchorX = activeAnchor.getX();
     var anchorY = activeAnchor.getY();
-    var tmp;
 
 //        console.log("anchorX:"+anchorX,"anchorY:"+anchorY);
     switch (activeAnchor.getName()) {
@@ -491,7 +686,7 @@
     var stage = group.getStage();
     var layer = group.getLayer();
     var minX = drawCanvas.getBoundingClientRect().left;
-    var maxX = drawCanvas.getBoundingClientRect().right + imgStageWidth;
+    var maxX = drawCanvas.getBoundingClientRect().left + imgStageWidth;
     var minY = drawCanvas.getBoundingClientRect().top;
     var maxY = drawCanvas.getBoundingClientRect().top + imgStageHeight;
     var anchor = new Konva.Circle({
@@ -499,7 +694,7 @@
       y: y,
       stroke: '#666',
       fill: '#ddd',
-      strokeWidth: 1,
+      strokeWidth: 2,
       radius: 4,
       name: name,
       draggable: true,
@@ -599,24 +794,110 @@
           document.body.style.cursor = 'crosshair';
           break;
       }
-      this.strokeWidth(2);
+      this.strokeWidth(3);
       mouseIsOnCircle = true;
       layer.draw();
     });
     anchor.on('mouseout', function () {
       document.body.style.cursor = 'default';
-      this.strokeWidth(1);
+      this.strokeWidth(2);
       mouseIsOnCircle = false;
       layer.draw();
     });
     group.add(anchor);
   }
-  window.addEventListener('keydown', check, true);
+  addEventListener('keydown', check, true);
   document.oncontextmenu = function () {
     return false;
   };
+  function nextImg(){
+    if (imageIds[gIndex + 1]) {
+      Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
+        let o = res.body;
+        echoGroups = o.objects;
+        currentImageId = o.id;
+        gIndex++;
+        imageObj.src = "/f/" + o.path;
+        Bus.$emit('updateImgName', o.path);
+        Bus.$emit('updateUser', o.demname);
+        console.log("/image/:id : ", res.body);
+      }, err => {
+        console.log("error /image/:id : ", err);
+      });
+    } else {
+      Vue.http.get("/images/_next", {params: {"type": opType}}).then(resp => {
+        console.log(resp.body);
+        let o = resp.body;
+        echoGroups = o.objects;
+        currentImageId = o.id;
+        Bus.$emit('updateCounts', imageIds.length);
+        imageIds.push(currentImageId);
+        gIndex = imageIds.length - 1;
+        console.log(imageIds);
+        imageObj.src = "/f/" + o.path;
+        Bus.$emit('updateImgName', o.path);
+        Bus.$emit('updateUser', o.demname);
+        tem[temCount] = o.path;
+        temCount++;
+      }, error => {
+        Bus.$emit('updateCounts', imageIds.length);
+        if (error.ok == false) {
+          switch (error.status) {
+            case 404:
+              iView.Message.warning("没有更多图片了！");
+              break;
+            default:
+              iView.Message.error("服务器好像出了点问题！");
+              break;
+          }
+          if (opType == "review" && flag == 1) {
+            iView.Modal.confirm({
+              title: '提示：',
+              content: '这批标定确认合格吗？',
+              okText: '合格',
+              cancelText: '不合格',
+              onOk: () => {
+                qualified = 1;
+                console.log("这批图片审阅结束，合格！");
+                Vue.http.post("/judge/" + qualified, {"imageId": tem}).then(); 
+              },
+              onCancel: () => {
+                qualified = 0;
+                console.log("这批图片审阅结束，不合格！请重新标定！");
+                Vue.http.post("/judge/" + qualified, {"imageId": tem}).then();
+              }
+            });
+            flag = 0;
+          }
+        }
+        console.log("image error: ", error);
+      });
+    }
+  }
+  function charge(){
+    iView.Modal.confirm({
+      title: '提示：',
+      content: '这批标定确认合格吗？',
+      okText: '合格',
+      cancelText: '不合格',
+      onOk: () => {
+        qualified = 1;
+        console.log("这批图片审阅结束，合格！");
+        Vue.http.post("/judge/" + qualified, {"imageId": tem}).then();
+        nextImg();  
+      },
+      onCancel: () => {
+        qualified = 0;
+        console.log("这批图片审阅结束，不合格！请重新标定！");
+        Vue.http.post("/judge/" + qualified, {"imageId": tem}).then();
+        nextImg();
+      }
+    });
+    imageIds = [];
+    gIndex = -1;
+  }
   function check(e) {
-    var key = event.which || event.keyCode;
+    var key = e.which || e.keyCode;
     if (currentGroup) {
       var rect = currentGroup.get('Rect')[0];
       var rectRatio = rect.width() / rect.height();
@@ -704,6 +985,7 @@
           layer.draw();
           mouseIsInGroup = false;
           mouseIsOnCircle = false;
+          stage.addEventListener("mousedown", mouseDown, false);
           break;
       }
       if (currentGroup) {
@@ -718,56 +1000,29 @@
         for (var i = 0; i < layer.get('Group').length; i++) {
           var group = layer.get('Group')[i];
           var rect = group.get('Rect')[0];
-
           tags.push({
             "x": Math.round(group.getX() * zoomRatio),
             "y": Math.round(group.getY() * zoomRatio),
             "w": Math.round(rect.width() * zoomRatio),
             "h": Math.round(rect.height() * zoomRatio),
-            "type": "car"
+            "type": rect.attrs.type,  //commit img type
+            "user": setUser
           });
         }
         console.log("tags:", tags);
-        Vue.http.post("/image/" + currentImageId + "/_" + opType, {"objects": tags}).then(res => {
-          console.log("after tag: ", res.body);
-          let obj = res.body;
-          if (obj.status == "ok") {
-          }
-        }, err => {
-          console.log("tag error: ", err);
-        });
       }
-      if (imageIds[gIndex + 1]) {
-        Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
-          let o = res.body;
-          echoGroups = o.objects;
-          currentImageId = o.id;
-          gIndex++;
-          imageObj.src = "/f/P_" + o.path;
-          console.log("/image/:id : ", res.body);
-        }, err => {
-          console.log("error /image/:id : ", err);
-        });
-      } else {
-        Vue.http.get("/images/_next", {params:{"type": opType}}).then(resp => {
-          console.log(resp.body);
-          let o = resp.body;
-          echoGroups = o.objects;
-          currentImageId = o.id;
-          imageIds.push(currentImageId);
-          gIndex = imageIds.length - 1;
-          console.log(imageIds);
-          imageObj.src = "/f/P_" + o.path;
-        }, error => {
-          if (error.ok == false) {
-            switch (error.status) {
-              case 404:
-                this.$Message.warning("没有更多图片了！");
-                break;
-            }
-          }
-          console.log("image error: ", error);
-        });
+      Vue.http.post("/image/" + currentImageId + "/_" + opType, {"objects": tags}).then(res => {
+        console.log("after tag: ", res.body);
+        let obj = res.body;
+        if (obj.status == "ok") {
+        }
+      }, err => {
+        console.log("tag error: ", err);
+      });
+      if (imageIds.length >= 2 && opType == "review"){
+        charge();
+      }else {
+        nextImg();
       }
     }
     if (key == 65) {//a
@@ -776,45 +1031,66 @@
         for (var i = 0; i < layer.get('Group').length; i++) {
           var group = layer.get('Group')[i];
           var rect = group.get('Rect')[0];
-
           tags.push({
             "x": Math.round(group.getX() * zoomRatio),
             "y": Math.round(group.getY() * zoomRatio),
             "w": Math.round(rect.width() * zoomRatio),
             "h": Math.round(rect.height() * zoomRatio),
-            "type": "car"
+            "type": rect.attrs.type,
+            "user": setUser
           });
         }
         console.log("tags:", tags);
-        Vue.http.post("/image/" + currentImageId + "/_" + opType, {"objects": tags}).then(res => {
-          console.log("after tag: ", res.body);
-          let obj = res.body;
-          if (obj.status == "ok") {
-          }
-        }, err => {
-          console.log("tag error: ", err);
-        });
       }
-      if (imageIds[gIndex - 1]) {
-        Vue.http.get("/image/" + imageIds[gIndex - 1]).then(res => {
-          let o = res.body;
-          echoGroups = o.objects;
-          currentImageId = o.id;
-          gIndex--;
-          imageObj.src = "/f/P_" + o.path;
-          console.log("/image/:id : ", res.body);
-        }, err => {
-          console.log("error /image/:id : ", err);
-        });
-      } else {
-        this.$Message.warning("已经是第一张图片了！");
-      }
+      Vue.http.post("/image/" + currentImageId + "/_" + opType, {"objects": tags}).then(res => {
+        console.log("after tag: ", res.body);
+        let obj = res.body;
+        if (obj.status == "ok") {
+        }
+        if (imageIds[gIndex - 1]) {
+          Vue.http.get("/image/" + imageIds[gIndex - 1]).then(res => {
+            let o = res.body;
+            echoGroups = o.objects;
+            currentImageId = o.id;
+            gIndex--;
+            imageObj.src = "/f/" + o.path;
+            Bus.$emit('updateImgName', o.path);
+            Bus.$emit('updateUser', o.demname);
+            console.log("/image/:id : ", res.body);
+          }, err => {
+            console.log("error /image/:id : ", err);
+          });
+        } else {
+          iView.Message.warning("已经是第一张图片了！");
+        }
+      }, err => {
+        console.log("tag error: ", err);
+      });
     }
     if (key == 81) {//q
       if (layer.get('Group').length > 0) {
         if (currentGroup) {
           for (let i = 0; i < layer.get('Group').length; i++) {
-            layer.get('Group')[i].get('Rect')[0].setStroke('red');
+            var group = layer.get('Group')[i];
+            var rect = group.get('Rect')[0];
+            if(rect.attrs.type === "people"){ 
+                rect.setStroke('blue');
+              }else if(rect.attrs.type === "bike"){
+                rect.setStroke('#28FF28');
+              }else{
+                rect.setStroke('red');
+            }
+            rect.off("mouseover");
+            rect.off("mouseout");
+            group.draggable(false);
+            group.off("mouseover");
+            group.off("mouseout");
+            group.on('mouseover', function () {
+              mouseIsInGroup = true;
+            });
+            group.on('mouseout', function () {
+              mouseIsInGroup = false;
+            });
           }
           let j = layer.get('Group').indexOf(currentGroup);
           if (j < layer.get('Group').length - 1) {
@@ -830,13 +1106,52 @@
           }
         } else {
           for (let i = 0; i < layer.get('Group').length; i++) {
-            layer.get('Group')[i].get('Rect')[0].setStroke('red');
+            var group = layer.get('Group')[i];
+            var rect = group.get('Rect')[0];
+            if(rect.attrs.type === "people"){ 
+                rect.setStroke('blue');
+              }else if(rect.attrs.type === "bike"){
+                rect.setStroke('#28FF28');
+              }else{
+                rect.setStroke('red');
+              }
+            rect.off("mouseover");
+            rect.off("mouseout");
+            group.draggable(false);
+            group.off("mouseover");
+            group.off("mouseout");
+            group.on('mouseover', function () {
+              mouseIsInGroup = true;
+            });
+            group.on('mouseout', function () {
+              mouseIsInGroup = false;
+            });
           }
           let firstGroup = layer.get('Group')[0];
           firstGroup.get('Rect')[0].stroke('yellow');
           layer.draw();
           currentGroup = firstGroup;
         }
+
+        currentGroup.moveToTop();
+        currentGroup.get('Rect')[0].on('mouseover', function () {
+          document.body.style.cursor = 'move';
+        });
+        currentGroup.get('Rect')[0].on('mouseout', function () {
+          document.body.style.cursor = 'default';
+        });
+        currentGroup.on('mouseover', function () {
+          mouseIsOnCurrentGroup = true;
+          this.draggable(true);
+          stage.removeEventListener("mousedown", mouseDown, false);
+        });
+        currentGroup.on('mouseout', function () {
+          mouseIsOnCurrentGroup = false;
+          this.draggable(false);
+          stage.addEventListener("mousedown", mouseDown, false);
+        });
+        layer.draw();
+
       }
 
     }
