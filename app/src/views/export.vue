@@ -49,7 +49,7 @@
             align: 'center'
           },
           {
-            title: 'Reviewed',
+            title:  'Reviewed',
             key: 'Reviewed1',
             align: 'right'
           }
