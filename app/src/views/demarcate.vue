@@ -48,11 +48,15 @@
       opType,//demarcate:tag(default),review:review
       chance,//color'variable middle transmit
       setType = 'car',//set vehile type 
+<<<<<<< HEAD
       setUser = 'sun',//set user
       qualified = 1,
       flag = 1,
       temCount = 0,  //temporary count of temporary area
       tem = []
+=======
+      setUser = 'sun'//set user
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
 
   var startX, endX, startY, endY;
   var mouseIsDown,
@@ -157,11 +161,14 @@
             imageObj.src = "/f/" + o.path;
             this.$emit('updateImgName', o.path);
             this.$emit('updateUser', o.demname);
+<<<<<<< HEAD
             Bus.$emit('updateImgName', o.path);
             Bus.$emit('updateUser', o.demname);
             tem[temCount] = o.path;
             temCount++;
 
+=======
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
           }, error => {
             if (error.ok == false) {
               switch (error.status) {
@@ -176,7 +183,10 @@
             console.log("image error: ", error);
           });
         }
+<<<<<<< HEAD
         
+=======
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
         imageObj.onload = function () {
           stage.removeEventListener("mousedown", mouseDown, false);
           stage.addEventListener("mousedown", mouseDown, false);
@@ -211,7 +221,11 @@
               if(group.type === "people"){ 
                   chance = 'blue';
                 }else if(group.type === "bike"){
+<<<<<<< HEAD
                   chance = '#28FF28';
+=======
+                  chance = 'green';
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
                 }else{
                   chance = 'red';
                 }
@@ -219,7 +233,11 @@
                 width: group.w,
                 height: group.h,
                 stroke: chance,//next or precious img show rect'color
+<<<<<<< HEAD
                 strokeWidth: 2,
+=======
+                strokeWidth: 1,
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
                 type: group.type,   
                 user: group.user
               });
@@ -288,7 +306,11 @@
                       if(rect.attrs.type === "people"){ 
                         rect.setStroke('blue');
                       }else if(rect.attrs.type === "bike"){
+<<<<<<< HEAD
                         rect.setStroke('#28FF28');
+=======
+                        rect.setStroke('green');
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
                       }else{
                         rect.setStroke('red');
                       }
@@ -381,7 +403,11 @@
         switch(setType){
           case "people": chance = 'blue';
           break;
+<<<<<<< HEAD
           case "bike": chance = '#28FF28';
+=======
+          case "bike": chance = 'green';
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
           break;
           default: chance = 'red';
         }
@@ -389,7 +415,11 @@
           width: w,
           height: h, 
           stroke: chance,
+<<<<<<< HEAD
           strokeWidth: 2,
+=======
+          strokeWidth: 1,
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
           type: setType,
           user: setUser
         });
@@ -458,7 +488,11 @@
                 if(rect.attrs.type === "people"){ 
                   rect.setStroke('blue');
                 }else if(rect.attrs.type === "bike"){
+<<<<<<< HEAD
                   rect.setStroke('#28FF28');
+=======
+                  rect.setStroke('green');
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
                 }else{
                   rect.setStroke('red');
                 }
@@ -515,7 +549,11 @@
           if(rect.attrs.type === "people"){ 
             rect.setStroke('blue');
           }else if(rect.attrs.type === "bike"){
+<<<<<<< HEAD
             rect.setStroke('#28FF28');
+=======
+            rect.setStroke('green');
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
           }else{
            rect.setStroke('red');
           }
@@ -588,7 +626,11 @@
     switch(setType){
       case "people": context.strokeStyle = 'blue';
       break;
+<<<<<<< HEAD
       case "bike": context.strokeStyle = '#28FF28';
+=======
+      case "bike": context.strokeStyle = 'green';
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
       break;
       default: context.strokeStyle = 'red';
     }
@@ -1016,6 +1058,7 @@
         let obj = res.body;
         if (obj.status == "ok") {
         }
+<<<<<<< HEAD
       }, err => {
         console.log("tag error: ", err);
       });
@@ -1024,6 +1067,52 @@
       }else {
         nextImg();
       }
+=======
+        if (imageIds[gIndex + 1]) {
+          Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
+            let o = res.body;
+            echoGroups = o.objects;
+            currentImageId = o.id;
+            gIndex++;
+            imageObj.src = "/f/" + o.path;
+            Bus.$emit('updateImgName', o.path);
+            Bus.$emit('updateUser', o.demname);
+            console.log("/image/:id : ", res.body);
+          }, err => {
+            console.log("error /image/:id : ", err);
+          });
+        } else {
+          Vue.http.get("/images/_next", {params: {"type": opType}}).then(resp => {
+            console.log(resp.body);
+            let o = resp.body;
+            echoGroups = o.objects;
+            currentImageId = o.id;
+            Bus.$emit('updateCounts', imageIds.length);
+            imageIds.push(currentImageId);
+            gIndex = imageIds.length - 1;
+            console.log(imageIds);
+            imageObj.src = "/f/" + o.path;
+            Bus.$emit('updateImgName', o.path);
+            Bus.$emit('updateUser', o.demname);
+          }, error => {
+            Bus.$emit('updateCounts', imageIds.length);
+            if (error.ok == false) {
+              switch (error.status) {
+                case 404:
+                  iView.Message.warning("没有更多图片了！");
+                  break;
+                default:
+                  iView.$Message.error("服务器好像出了点问题！");
+                  break;
+              }
+            }
+            console.log("image error: ", error);
+          });
+        }
+      }, err => {
+        console.log("tag error: ", err);
+      });
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
     }
     if (key == 65) {//a
       var tags = [];
@@ -1076,7 +1165,11 @@
             if(rect.attrs.type === "people"){ 
                 rect.setStroke('blue');
               }else if(rect.attrs.type === "bike"){
+<<<<<<< HEAD
                 rect.setStroke('#28FF28');
+=======
+                rect.setStroke('green');
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
               }else{
                 rect.setStroke('red');
             }
@@ -1111,7 +1204,11 @@
             if(rect.attrs.type === "people"){ 
                 rect.setStroke('blue');
               }else if(rect.attrs.type === "bike"){
+<<<<<<< HEAD
                 rect.setStroke('#28FF28');
+=======
+                rect.setStroke('green');
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
               }else{
                 rect.setStroke('red');
               }

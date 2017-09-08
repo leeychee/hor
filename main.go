@@ -39,6 +39,14 @@ func main() {
 			c.JSON(200, gin.H{"status": "rebuilding"})
 		}
 	})
+	r.POST("/manage/_backup", func(c *gin.Context) {
+		if err := store.Backup(); err != nil {
+			log.Printf("fail to backup")
+			c.JSON(500, gin.H{"status": "failed"})
+		} else {
+			c.JSON(200, gin.H{"status": "success backup"})
+		}
+	})
 	r.GET("/images/_stat", func(c *gin.Context) {
 		s, err := store.Stat()
 		if err != nil {

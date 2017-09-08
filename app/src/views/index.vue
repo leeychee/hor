@@ -136,6 +136,7 @@
             <h3 style="display: inline;">Min Rect Size(px)：</h3>
             <Select v-model="minSize" size="small" style="width: 50px;" @on-change="changeMinSize">
               <Option v-for="item in minList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+<<<<<<< HEAD
             </Select>
           </div>
           <div v-if="showSetUser" style="float: right;margin: 2px;">
@@ -144,6 +145,16 @@
               <Option v-for="item in userList" :value="item.value" :key="item.value">{{ item.label}}</Option>
             </Select>
           </div>
+=======
+            </Select>
+          </div>
+          <div v-if="showSetUser" style="float: right;margin: 2px;">
+            <h3 style="display: inline;">User:</h3>
+            <Select v-model="userName" size="small" style="width: 60px;" @on-change="changeUserName">
+              <Option v-for="item in userList" :value="item.value" :key="item.value">{{ item.label}}</Option>
+            </Select>
+          </div>
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
           <div v-if="showSetType" style="float: right;margin: 2px;">
             <Radio-group v-model="preType" size="large" style="width: 210px;" @on-change="changePreType">
               <Radio label="car">
@@ -151,7 +162,11 @@
                 <span style="font-size: 1.17em;">汽车</span>
               </Radio>
               <Radio label="bike">
+<<<<<<< HEAD
                 <Icon value="bike" type="social-bike" style="color:#28FF28"></Icon>
+=======
+                <Icon value="bike" type="social-bike" style="color:green"></Icon>
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
                 <span style="font-size: 1.17em;">自行车</span>
               </Radio>
               <Radio label="people">
@@ -225,16 +240,22 @@
           {
             value: 'wu',
             label: 'wu'
+<<<<<<< HEAD
           },
           {
             value: 'li',
             label: 'li'
+=======
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
           }
         ],
         minSize: '60',
         userName: 'sun',
         preType: 'car',
+<<<<<<< HEAD
         User: 'Ide-User',
+=======
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
         showUser: false,
         showRectSet: true,
         showSetUser: true,
@@ -328,7 +349,10 @@
             this.imgName = "";
             this.currentCounts = 0;
             this.showUser = false;
+<<<<<<< HEAD
             this.User = "Ide-User";
+=======
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
             this.showRectSet = true;
             this.showSetUser = true;
             this.showSetType = true;
@@ -338,16 +362,26 @@
 //                        this.$router.replace('review');
             this.$router.replace({name: 'demarcate', params: {type: 'r'}});
             //this.title = "Review";
+<<<<<<< HEAD
             this.user = "",
             this.imgName = "";
             this.showUser = true;
             this.User = "Rev-User";
             this.currentCounts = 0;
+=======
+            this.imgName = "";
+            this.currentCounts = 0;
+            this.user = "",
+            this.showUser = true;
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
             this.showRectSet = true;
             this.showSetUser = true;
             this.showSetType = true;
             this.showCurrent = true;
+<<<<<<< HEAD
             
+=======
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
             break;
           case "3":
             this.$router.replace({name: 'export'});
@@ -371,7 +405,11 @@
       },
       showUserName: function (demname) {
         this.user = demname;
+<<<<<<< HEAD
       },
+=======
+      }
+>>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
     },
     mounted: function () {
 //            this.$router.replace('demarcate');

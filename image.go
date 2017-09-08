@@ -1,16 +1,23 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
-	"encoding/json"
+	"io"
 
 	"github.com/boltdb/bolt"
 )
+
+type version struct {
+	Version string `json:"version"`
+}
 
 type object struct {
 	X    int    `json:"x"`
@@ -26,11 +33,14 @@ type objects struct {
 }
 
 type image struct {
-	ID         uint64    `json:"id"`
-	Path       string    `json:"path"`
-	Identified int       `json:"identified"`
-	Reviewed   int       `json:"reviewed"`
-	Objects    []*object `json:"objects"`
+	ID           uint64    `json:"id"`
+	Path         string    `json:"path"`
+	Identified   int       `json:"identified"`
+	Reviewed     int       `json:"reviewed"`
+	Objects      []*object `json:"objects"`
+	CheckoutTime time.Time `json:"checkout_time"`
+	DemarkedTime time.Time `json:"demarked_time"`
+	ReviewedTime time.Time `json:"reviewed_time"`
 }
 
 type stat struct {
@@ -93,7 +103,7 @@ func (s *store) init() error {
 		filepath.Walk(s.path, func(path string, f os.FileInfo, err error) error {
 			if !f.IsDir() && strings.HasPrefix(f.Name(), "P_") {
 				log.Printf("Find a image: %s\n", path)
-				relativePath := path[len(s.path)+1:]
+				relativePath := path[len(s.path)-1:]
 				imgC <- relativePath
 			}
 			return nil
@@ -123,9 +133,37 @@ func (s *store) Rebuild() error {
 	if err := s.Close(); err != nil {
 		return err
 	}
-	if err := os.Remove(s.dbpath); err != nil {
+	backpath := fmt.Sprintf("%s.%d", s.dbpath, time.Now().Unix())
+	if err := os.Rename(s.dbpath, backpath); err != nil {
 		return err
 	}
+	fmt.Printf("backup db to %s.", backpath)
+	s1, err := newStore(s.path)
+	if err != nil {
+		return err
+	}
+	s.db = s1.db
+	return nil
+}
+
+func (s *store) Backup() error {
+	if err := s.Close(); err != nil {
+		return err
+	}
+	backpath := fmt.Sprintf("%s.%d", s.dbpath, time.Now().Unix())
+	f, err := os.Open(s.dbpath)
+	if err != nil {
+		return err
+	}
+	bf, err := os.OpenFile(backpath, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(bf, f)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("backup db to %s.", backpath)
 	s1, err := newStore(s.path)
 	if err != nil {
 		return err
@@ -140,16 +178,23 @@ func (s *store) Close() error {
 
 func (s *store) NextImage(t string) (*image, error) {
 	var img *image
-	err := s.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(imgBucketName).Cursor()
-		img = &image{}
-		for k, v := b.First(); k != nil; k, v = b.Next() {
+	err := s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(imgBucketName)
+		bc := b.Cursor()
+		for k, v := bc.First(); k != nil; k, v = bc.Next() {
+			img = &image{}
 			if err := json.Unmarshal(v, img); err != nil {
 				return err
 			}
-			if t == "tag" && img.Identified == 0 {
+			if t == "tag" && img.Identified == 0 && time.Since(img.CheckoutTime) > time.Second*60 {
+				img.CheckoutTime = time.Now()
+				buf, _ := json.Marshal(img)
+				b.Put(itob(img.ID), buf)
 				return nil
-			} else if t == "review" && img.Identified > 0 && img.Reviewed == 0 {
+			} else if t == "review" && img.Identified > 0 && img.Reviewed == 0 && time.Since(img.CheckoutTime) > time.Second*60 {
+				img.CheckoutTime = time.Now()
+				buf, _ := json.Marshal(img)
+				b.Put(itob(img.ID), buf)
 				return nil
 			}
 		}
@@ -178,6 +223,7 @@ func (s *store) CreateImage(img *image) error {
 func (s *store) UpdateImage(img *image) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(imgBucketName)
+		img.CheckoutTime = time.Time{}
 		buf, _ := json.Marshal(img)
 		b.Put(itob(img.ID), buf)
 		return nil

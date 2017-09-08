@@ -32,11 +32,12 @@ module.exports = merge(webpackBaseConfig, {
         }),
         new webpack.optimize.UglifyJsPlugin({
             compress: {
-                warnings: false
+                warnings: false,
+                drop_console: true
             }
         }),
         new HtmlWebpackPlugin({
-            filename: '../index_prod.html',
+            filename: '../index.html',
             template: './src/template/index.ejs',
             inject: false
         })
