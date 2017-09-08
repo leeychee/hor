@@ -49,11 +49,7 @@
             align: 'center'
           },
           {
-<<<<<<< HEAD
-            title:  'Reviewed',
-=======
             title: 'Reviewed',
->>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
             key: 'Reviewed1',
             align: 'right'
           }
@@ -81,16 +77,11 @@
         ];
         this.data1 = [
           {
-<<<<<<< HEAD
             user: o.users[0].username,
-=======
-            user: 'sun',
->>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
             Identified1: o.users[0].demcount,
             Reviewed1: o.users[0].revcount
           },
           {
-<<<<<<< HEAD
             user: o.users[1].username,
             Identified1: o.users[1].demcount,
             Reviewed1: o.users[1].revcount
@@ -99,11 +90,6 @@
             user: o.users[2].username,
             Identified1: o.users[2].demcount,
             Reviewed1: o.users[2].revcount
-=======
-            user: 'wu',
-            Identified1: o.users[1].demcount,
-            Reviewed1: o.users[1].revcount
->>>>>>> 09e3a07aea3b21a0b13c012d03288186202ad85a
           }
         ];
       }, err => {
