@@ -47,9 +47,12 @@
       minRectSize = 60,
       opType,//demarcate:tag(default),review:review
       chance,//color'variable middle transmit
-      setType ,//set vehile type 
-      setUser,//set user
-      chanceUser = 'sun';//judge whether chanceuser or not
+      setType = 'car',//set vehile type 
+      setUser = 'sun',//set user
+      qualified = 1,
+      flag = 1,
+      temCount = 0,  //temporary count of temporary area
+      tem = []
 
   var startX, endX, startY, endY;
   var mouseIsDown,
@@ -130,74 +133,6 @@
 
         imageIds = [];
         gIndex = -1;
-        
-        if(chanceUser !== setUser){
-          var tags = [];
-          if (layer.get('Group').length > 0) {
-            for (var i = 0; i < layer.get('Group').length; i++) {
-            var group = layer.get('Group')[i];
-            var rect = group.get('Rect')[0];
-            tags.push({
-              "x": Math.round(group.getX() * zoomRatio),
-              "y": Math.round(group.getY() * zoomRatio),
-              "w": Math.round(rect.width() * zoomRatio),
-              "h": Math.round(rect.height() * zoomRatio),
-              "type": rect.attrs.type,  //commit img type
-              "user": setUser 
-            });
-            }
-            console.log("tags:", tags);
-          }
-          Vue.http.post("/image/" + currentImageId + "/_" + opType, {"objects": tags}).then(res => {
-          console.log("after tag: ", res.body);
-          let obj = res.body;
-          if (obj.status == "ok") {
-          }
-          if (imageIds[gIndex + 1]) {
-            Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
-              let o = res.body;
-              echoGroups = o.objects;
-              currentImageId = o.id;
-              gIndex++;
-              imageObj.src = "/f/" + o.path;
-              Bus.$emit('updateImgName', o.path);
-              console.log("/image/:id : ", res.body);
-            }, err => {
-              console.log("error /image/:id : ", err);
-            });
-          } else {
-            Vue.http.get("/images/_next", {params: {"type": opType}}).then(resp => {
-              console.log(resp.body);
-              let o = resp.body;
-              echoGroups = o.objects;
-              currentImageId = o.id;
-              Bus.$emit('updateCounts', imageIds.length);
-              imageIds.push(currentImageId);
-              gIndex = imageIds.length - 1;
-              console.log(imageIds);
-              imageObj.src = "/f/" + o.path;
-              Bus.$emit('updateImgName', o.path);
-            }, error => {
-              Bus.$emit('updateCounts', imageIds.length);
-              if (error.ok == false) {
-                switch (error.status) {
-                  case 404:
-                    iView.Message.warning("没有更多图片了！");
-                    break;
-                  default:
-                    iView.$Message.error("服务器好像出了点问题！");
-                    break;
-                }
-              }
-              console.log("image error: ", error);
-            });
-          }
-        }, err => {
-          console.log("tag error: ", err);
-        });
-          chanceUser = setUser;
-        }
-
         if (imageIds[gIndex + 1]) {
           Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
             let o = res.body;
@@ -206,10 +141,10 @@
             gIndex++;
             imageObj.src = "/f/" + o.path;
             this.$emit('updateImgName', o.path);
+            this.$emit('updateUser', o.demname);
             console.log("/image/:id : ", res.body);
           }, err => {
-            console.log("error /image/:id : ", err);
-          });
+            console.log("error /image/:id : ", err);            });
         } else {
           Vue.http.get("/images/_next", {params: {"type": opType}}).then(resp => {
             console.log(resp.body);
@@ -221,6 +156,12 @@
             console.log(imageIds);
             imageObj.src = "/f/" + o.path;
             this.$emit('updateImgName', o.path);
+            this.$emit('updateUser', o.demname);
+            Bus.$emit('updateImgName', o.path);
+            Bus.$emit('updateUser', o.demname);
+            tem[temCount] = o.path;
+            temCount++;
+
           }, error => {
             if (error.ok == false) {
               switch (error.status) {
@@ -235,6 +176,7 @@
             console.log("image error: ", error);
           });
         }
+        
         imageObj.onload = function () {
           stage.removeEventListener("mousedown", mouseDown, false);
           stage.addEventListener("mousedown", mouseDown, false);
@@ -269,7 +211,7 @@
               if(group.type === "people"){ 
                   chance = 'blue';
                 }else if(group.type === "bike"){
-                  chance = 'green';
+                  chance = '#28FF28';
                 }else{
                   chance = 'red';
                 }
@@ -277,8 +219,8 @@
                 width: group.w,
                 height: group.h,
                 stroke: chance,//next or precious img show rect'color
-                strokeWidth: 1,
-                type: group.type,   //disunderstand
+                strokeWidth: 2,
+                type: group.type,   
                 user: group.user
               });
               rect.on('mouseover', function () {
@@ -346,7 +288,7 @@
                       if(rect.attrs.type === "people"){ 
                         rect.setStroke('blue');
                       }else if(rect.attrs.type === "bike"){
-                        rect.setStroke('green');
+                        rect.setStroke('#28FF28');
                       }else{
                         rect.setStroke('red');
                       }
@@ -439,7 +381,7 @@
         switch(setType){
           case "people": chance = 'blue';
           break;
-          case "bike": chance = 'green';
+          case "bike": chance = '#28FF28';
           break;
           default: chance = 'red';
         }
@@ -447,8 +389,9 @@
           width: w,
           height: h, 
           stroke: chance,
-          strokeWidth: 1,
-          type: setType
+          strokeWidth: 2,
+          type: setType,
+          user: setUser
         });
         rect.on('mouseover', function () {
           document.body.style.cursor = 'default';
@@ -515,7 +458,7 @@
                 if(rect.attrs.type === "people"){ 
                   rect.setStroke('blue');
                 }else if(rect.attrs.type === "bike"){
-                  rect.setStroke('green');
+                  rect.setStroke('#28FF28');
                 }else{
                   rect.setStroke('red');
                 }
@@ -572,7 +515,7 @@
           if(rect.attrs.type === "people"){ 
             rect.setStroke('blue');
           }else if(rect.attrs.type === "bike"){
-            rect.setStroke('green');
+            rect.setStroke('#28FF28');
           }else{
            rect.setStroke('red');
           }
@@ -645,7 +588,7 @@
     switch(setType){
       case "people": context.strokeStyle = 'blue';
       break;
-      case "bike": context.strokeStyle = 'green';
+      case "bike": context.strokeStyle = '#28FF28';
       break;
       default: context.strokeStyle = 'red';
     }
@@ -751,7 +694,7 @@
       y: y,
       stroke: '#666',
       fill: '#ddd',
-      strokeWidth: 1,
+      strokeWidth: 2,
       radius: 4,
       name: name,
       draggable: true,
@@ -851,13 +794,13 @@
           document.body.style.cursor = 'crosshair';
           break;
       }
-      this.strokeWidth(2);
+      this.strokeWidth(3);
       mouseIsOnCircle = true;
       layer.draw();
     });
     anchor.on('mouseout', function () {
       document.body.style.cursor = 'default';
-      this.strokeWidth(1);
+      this.strokeWidth(2);
       mouseIsOnCircle = false;
       layer.draw();
     });
@@ -867,6 +810,92 @@
   document.oncontextmenu = function () {
     return false;
   };
+  function nextImg(){
+    if (imageIds[gIndex + 1]) {
+      Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
+        let o = res.body;
+        echoGroups = o.objects;
+        currentImageId = o.id;
+        gIndex++;
+        imageObj.src = "/f/" + o.path;
+        Bus.$emit('updateImgName', o.path);
+        Bus.$emit('updateUser', o.demname);
+        console.log("/image/:id : ", res.body);
+      }, err => {
+        console.log("error /image/:id : ", err);
+      });
+    } else {
+      Vue.http.get("/images/_next", {params: {"type": opType}}).then(resp => {
+        console.log(resp.body);
+        let o = resp.body;
+        echoGroups = o.objects;
+        currentImageId = o.id;
+        Bus.$emit('updateCounts', imageIds.length);
+        imageIds.push(currentImageId);
+        gIndex = imageIds.length - 1;
+        console.log(imageIds);
+        imageObj.src = "/f/" + o.path;
+        Bus.$emit('updateImgName', o.path);
+        Bus.$emit('updateUser', o.demname);
+        tem[temCount] = o.path;
+        temCount++;
+      }, error => {
+        Bus.$emit('updateCounts', imageIds.length);
+        if (error.ok == false) {
+          switch (error.status) {
+            case 404:
+              iView.Message.warning("没有更多图片了！");
+              break;
+            default:
+              iView.Message.error("服务器好像出了点问题！");
+              break;
+          }
+          if (opType == "review" && flag == 1) {
+            iView.Modal.confirm({
+              title: '提示：',
+              content: '这批标定确认合格吗？',
+              okText: '合格',
+              cancelText: '不合格',
+              onOk: () => {
+                qualified = 1;
+                console.log("这批图片审阅结束，合格！");
+                Vue.http.post("/judge/" + qualified, {"imageId": tem}).then(); 
+              },
+              onCancel: () => {
+                qualified = 0;
+                console.log("这批图片审阅结束，不合格！请重新标定！");
+                Vue.http.post("/judge/" + qualified, {"imageId": tem}).then();
+              }
+            });
+            flag = 0;
+          }
+        }
+        console.log("image error: ", error);
+      });
+    }
+  }
+  function charge(){
+    iView.Modal.confirm({
+      title: '提示：',
+      content: '这批标定确认合格吗？',
+      okText: '合格',
+      cancelText: '不合格',
+      onOk: () => {
+        qualified = 1;
+        console.log("这批图片审阅结束，合格！");
+        Vue.http.post("/judge/" + qualified, {"imageId": tem}).then();
+        nextImg();  
+      },
+      onCancel: () => {
+        qualified = 0;
+        console.log("这批图片审阅结束，不合格！请重新标定！");
+        Vue.http.post("/judge/" + qualified, {"imageId": tem}).then();
+        nextImg();
+      }
+    });
+    imageIds = [];
+    gIndex = -1;
+  }
   function check(e) {
     var key = e.which || e.keyCode;
     if (currentGroup) {
@@ -977,7 +1006,7 @@
             "w": Math.round(rect.width() * zoomRatio),
             "h": Math.round(rect.height() * zoomRatio),
             "type": rect.attrs.type,  //commit img type
-            "user": setUser 
+            "user": setUser
           });
         }
         console.log("tags:", tags);
@@ -987,48 +1016,14 @@
         let obj = res.body;
         if (obj.status == "ok") {
         }
-        if (imageIds[gIndex + 1]) {
-          Vue.http.get("/image/" + imageIds[gIndex + 1]).then(res => {
-            let o = res.body;
-            echoGroups = o.objects;
-            currentImageId = o.id;
-            gIndex++;
-            imageObj.src = "/f/" + o.path;
-            Bus.$emit('updateImgName', o.path);
-            console.log("/image/:id : ", res.body);
-          }, err => {
-            console.log("error /image/:id : ", err);
-          });
-        } else {
-          Vue.http.get("/images/_next", {params: {"type": opType}}).then(resp => {
-            console.log(resp.body);
-            let o = resp.body;
-            echoGroups = o.objects;
-            currentImageId = o.id;
-            Bus.$emit('updateCounts', imageIds.length);
-            imageIds.push(currentImageId);
-            gIndex = imageIds.length - 1;
-            console.log(imageIds);
-            imageObj.src = "/f/" + o.path;
-            Bus.$emit('updateImgName', o.path);
-          }, error => {
-            Bus.$emit('updateCounts', imageIds.length);
-            if (error.ok == false) {
-              switch (error.status) {
-                case 404:
-                  iView.Message.warning("没有更多图片了！");
-                  break;
-                default:
-                  iView.$Message.error("服务器好像出了点问题！");
-                  break;
-              }
-            }
-            console.log("image error: ", error);
-          });
-        }
       }, err => {
         console.log("tag error: ", err);
       });
+      if (imageIds.length >= 2 && opType == "review"){
+        charge();
+      }else {
+        nextImg();
+      }
     }
     if (key == 65) {//a
       var tags = [];
@@ -1041,7 +1036,8 @@
             "y": Math.round(group.getY() * zoomRatio),
             "w": Math.round(rect.width() * zoomRatio),
             "h": Math.round(rect.height() * zoomRatio),
-            "type": rect.attrs.type
+            "type": rect.attrs.type,
+            "user": setUser
           });
         }
         console.log("tags:", tags);
@@ -1059,6 +1055,7 @@
             gIndex--;
             imageObj.src = "/f/" + o.path;
             Bus.$emit('updateImgName', o.path);
+            Bus.$emit('updateUser', o.demname);
             console.log("/image/:id : ", res.body);
           }, err => {
             console.log("error /image/:id : ", err);
@@ -1079,7 +1076,7 @@
             if(rect.attrs.type === "people"){ 
                 rect.setStroke('blue');
               }else if(rect.attrs.type === "bike"){
-                rect.setStroke('green');
+                rect.setStroke('#28FF28');
               }else{
                 rect.setStroke('red');
             }
@@ -1114,7 +1111,7 @@
             if(rect.attrs.type === "people"){ 
                 rect.setStroke('blue');
               }else if(rect.attrs.type === "bike"){
-                rect.setStroke('green');
+                rect.setStroke('#28FF28');
               }else{
                 rect.setStroke('red');
               }

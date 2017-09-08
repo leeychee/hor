@@ -6,17 +6,12 @@
       <Col v-if="showError" span="4" offset="10" >
       <Alert type="error" closable>无法获取统计信息</Alert>
       </Col>
-      <Col span="8" offset="8">
-      <Card dis-hover>
-        <p slot="title">Statistics</p>
-        <span style="float: right;">{{all}}</span><h4>All</h4>
-        <span style="float: right;">{{identified}}</span><h4>Identified</h4>
-        <span style="float: right;">{{reviewed}}</span><h4>Reviewed</h4>
-      </Card>
-      </Col>
     </Row>
-    <div style="margin-top: 20px;">
-      <Table border :columns = "columns1" :data = "data1"></Table>
+    <div style="width: 40%;margin: 0 auto;">
+      <Table style="width: 100%;height: 100%;border-radius: 5px;" :columns="columns0" :data="data0">
+      </Table>
+      <Table style="width: 100%;height: 100%;border-radius: 5px;" :columns="columns1" :data="data1">
+      </Table>
     </div>
     <div style="text-align: center;">
       <Button type="info" size="large" style="margin: 20px;">导出xml</Button>
@@ -27,6 +22,22 @@
   export default {
     data() {
       return {
+        showError: false,
+        all: 0,
+        identified: 0,
+        reviewed: 0,
+        columns0: [
+          {
+            title: 'Statistics',
+            key: 'signType'
+          },
+          {
+            title: 'Num',
+            key: 'num',
+            align: 'right'
+          }
+        ],
+        data0: [],
         columns1: [
           {
             title: 'User',
@@ -34,45 +45,59 @@
           },
           {
             title: 'Identified',
-            key: 'Identified'
+            key: 'Identified1',
+            align: 'center'
           },
           {
             title: 'Reviewed',
-            key: 'Reviewed'
+            key: 'Reviewed1',
+            align: 'right'
           }
         ],
-        data1: [
-          {
-            user: 'sun',
-            Identified: '0',
-            Reviewed: '0'
-          },
-          {
-            user: 'wu',
-            Identified: '0',
-            Reviewed: '0'
-          }
-        ],
-        showError: false,
-        all: 0,
-        identified: 0,
-        reviewed: 0,
-      };
+        data1: []
+      }
     },
     mounted() {
       this.$http.get("/images/_stat").then(res => {
         console.log(res);
         let o = res.body;
-        this.all = o.all;
-        this.identified = o.identified;
-        this.reviewed = o.Reviewed;
+        this.data0 = [
+          {
+            signType: 'All',
+            num: o.all
+          },
+          {
+            signType: 'Identified',
+            num: o.identified
+          },
+          {
+            signType: 'Reviewed',
+            num: o.Reviewed
+          }
+        ];
+        this.data1 = [
+          {
+            user: o.users[0].username,
+            Identified1: o.users[0].demcount,
+            Reviewed1: o.users[0].revcount
+          },
+          {
+            user: o.users[1].username,
+            Identified1: o.users[1].demcount,
+            Reviewed1: o.users[1].revcount
+          },
+          {
+            user: o.users[2].username,
+            Identified1: o.users[2].demcount,
+            Reviewed1: o.users[2].revcount
+          }
+        ];
       }, err => {
         this.showError = true;
       });
     },
     beforeDestroy() {
-
     },
     methods: {}
-  };
+  }
 </script>
